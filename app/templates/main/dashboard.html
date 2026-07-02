@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Painel — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">Painel</h1>
+    <p class="text-muted mb-0">Visão geral do inventário</p>
+  </div>
+  <a href="{{ url_for('assets.new_asset') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg"></i> Novo ativo
+  </a>
+</div>
+
+<div class="stat-grid">
+  <div class="card stat-card hoverable">
+    <div class="stat-value">{{ stats.total_assets }}</div>
+    <div class="stat-label"><i class="bi bi-hdd-stack"></i> Ativos</div>
+  </div>
+  <div class="card stat-card hoverable">
+    <div class="stat-value" style="font-size:1.6rem">{{ stats.total_value | brl }}</div>
+    <div class="stat-label"><i class="bi bi-cash-stack"></i> Valor do inventário</div>
+  </div>
+  <div class="card stat-card hoverable">
+    <div class="stat-value">{{ stats.warranty_count }}</div>
+    <div class="stat-label"><i class="bi bi-shield-exclamation"></i> Garantias vencendo</div>
+  </div>
+  <div class="card stat-card hoverable">
+    <div class="stat-value">{{ stats.unassigned_count }}</div>
+    <div class="stat-label"><i class="bi bi-person-dash"></i> Sem responsável</div>
+  </div>
+  <div class="card stat-card hoverable">
+    <div class="stat-value">{{ stats.open_maintenance_count }}</div>
+    <div class="stat-label"><i class="bi bi-tools"></i> Manutenções abertas</div>
+  </div>
+  <div class="card stat-card hoverable">
+    <div class="stat-value">{{ stats.employees }}</div>
+    <div class="stat-label"><i class="bi bi-people"></i> Colaboradores</div>
+  </div>
+</div>
+
+<div class="form-grid" style="align-items:start">
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-shield-exclamation"></i> Garantias vencendo (próximos {{ warranty_window }} dias)</div>
+    {% if warranty_expiring %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Patrimônio</th><th>Tipo</th><th>Vence em</th></tr></thead>
+        <tbody>
+          {% for a in warranty_expiring %}
+          <tr>
+            <td><a href="{{ url_for('assets.view_asset', asset_id=a.id) }}">{{ a.asset_tag }}</a></td>
+            <td>{{ a.asset_type.name if a.asset_type else '—' }}</td>
+            <td>{{ a.warranty_expiry_date | date_br }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">Nenhuma garantia vencendo nesse período.</p>
+    {% endif %}
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-person-dash"></i> Ativos sem responsável</div>
+    {% if unassigned %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Patrimônio</th><th>Tipo</th><th>Local</th></tr></thead>
+        <tbody>
+          {% for a in unassigned %}
+          <tr>
+            <td><a href="{{ url_for('assets.view_asset', asset_id=a.id) }}">{{ a.asset_tag }}</a></td>
+            <td>{{ a.asset_type.name if a.asset_type else '—' }}</td>
+            <td>{{ a.location.name if a.location else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if unassigned_total > unassigned|length %}
+    <p class="text-muted mt-2 mb-0" style="font-size:0.8rem">+ {{ unassigned_total - unassigned|length }} outro(s)…</p>
+    {% endif %}
+    {% else %}
+    <p class="text-muted mb-0">Todos os ativos ativos têm responsável. 👍</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="form-grid" style="align-items:start">
+  <div class="card mb-2">
+    <div class="d-flex align-center justify-between mb-2">
+      <div class="card-title mb-0"><i class="bi bi-tools"></i> Manutenções em aberto</div>
+      <a href="{{ url_for('maintenance.list_maintenance', status='open') }}" class="text-muted" style="font-size:0.8rem">ver todas</a>
+    </div>
+    {% if open_maintenances %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Ativo</th><th>Tipo</th><th>Início</th></tr></thead>
+        <tbody>
+          {% for m in open_maintenances %}
+          <tr>
+            <td><a href="{{ url_for('assets.view_asset', asset_id=m.asset_id) }}">{{ m.asset.asset_tag if m.asset else '—' }}</a></td>
+            <td><span class="badge {{ m.type.value | maintenance_badge }}">{{ m.type.value | maintenance_label }}</span></td>
+            <td>{{ m.started_at | date_br }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-muted mb-0">Nenhuma manutenção em aberto.</p>
+    {% endif %}
+  </div>
+
+  <div class="card mb-2">
+    <div class="card-title">Ativos por status</div>
+    <div class="table-wrap">
+      <table class="table">
+        <tbody>
+          {% for status, count in stats.status_counts.items() %}
+          <tr>
+            <td>{{ status.value | status_label }}</td>
+            <td style="text-align:right"><span class="badge {{ status.value | status_badge }}">{{ count }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

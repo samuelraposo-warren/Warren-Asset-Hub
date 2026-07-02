@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Inventário de TI{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/theme.css') }}" rel="stylesheet">
+  {% block head %}{% endblock %}
+</head>
+<body class="app-shell">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <i class="bi bi-hdd-stack"></i> Inventário
+      </div>
+      <nav class="sidebar-nav">
+        {% set nav = request.endpoint or '' %}
+        <a class="nav-link-item {{ 'active' if nav.startswith('main.') }}"
+           href="{{ url_for('main.dashboard') }}">
+          <i class="bi bi-grid-1x2"></i> Painel
+        </a>
+        <a class="nav-link-item {{ 'active' if nav.startswith('assets.') }}"
+           href="{{ url_for('assets.list_assets') }}">
+          <i class="bi bi-hdd-stack"></i> Ativos
+        </a>
+        <a class="nav-link-item {{ 'active' if nav.startswith('maintenance.') }}"
+           href="{{ url_for('maintenance.list_maintenance') }}">
+          <i class="bi bi-tools"></i> Manutenções
+        </a>
+        {% if current_user.is_admin %}
+        <a class="nav-link-item {{ 'active' if nav.startswith('audit.') }}"
+           href="{{ url_for('audit.list_logs') }}">
+          <i class="bi bi-shield-check"></i> Auditoria
+        </a>
+        {% endif %}
+
+        <div class="form-section-title" style="margin:1.25rem 0 0.5rem 0.85rem">Cadastros</div>
+        {% set cur_entity = request.view_args.get('entity') if request.view_args else None %}
+        {% for item in REGISTRY_MENU %}
+        <a class="nav-link-item {{ 'active' if nav.startswith('registry.') and cur_entity == item.slug }}"
+           href="{{ url_for('registry.list_entity', entity=item.slug) }}">
+          <i class="bi {{ item.icon }}"></i> {{ item.plural }}
+        </a>
+        {% endfor %}
+      </nav>
+      <div class="sidebar-footer">
+        <div class="d-flex align-center gap-1 mb-2">
+          <i class="bi bi-person-circle" style="font-size:1.4rem;color:var(--color-text-muted)"></i>
+          <div>
+            <div style="font-size:0.9rem;font-weight:500">{{ current_user.name }}</div>
+            <div class="text-muted" style="font-size:0.75rem">{{ current_user.role.value }}</div>
+          </div>
+        </div>
+        <a class="nav-link-item" href="{{ url_for('auth.logout') }}">
+          <i class="bi bi-box-arrow-right"></i> Sair
+        </a>
+      </div>
+    </aside>
+
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}" role="alert">
+            <span>{{ message }}</span>
+            <button type="button" class="btn-close" onclick="this.parentElement.remove()">&times;</button>
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Auditoria — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-shield-check"></i> Auditoria</h1>
+    <p class="text-muted mb-0">{{ pagination.total }} registro(s) · imutável</p>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <form method="get" class="form-grid" style="align-items:end">
+    <div class="form-group mb-0">
+      <label class="form-label" for="table">Tabela</label>
+      <select id="table" name="table" class="form-select">
+        <option value="">Todas</option>
+        {% for t in tables %}
+        <option value="{{ t }}" {{ 'selected' if filters.table == t }}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="action">Ação</label>
+      <select id="action" name="action" class="form-select">
+        <option value="">Todas</option>
+        {% for a in AuditAction %}
+        <option value="{{ a.name }}" {{ 'selected' if filters.action == a.name }}>{{ a.value | audit_label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0 d-flex gap-1">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+      <a href="{{ url_for('audit.list_logs') }}" class="btn btn-ghost">Limpar</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  {% if logs %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data/hora</th>
+          <th>Ação</th>
+          <th>Tabela</th>
+          <th>Registro</th>
+          <th>Usuário</th>
+          <th>IP</th>
+          <th style="text-align:right">Detalhes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.changed_at.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+          <td><span class="badge {{ log.action.value | audit_badge }}">{{ log.action.value | audit_label }}</span></td>
+          <td>{{ log.table_name }}</td>
+          <td>#{{ log.record_id }}</td>
+          <td>{{ log.changed_by.name if log.changed_by else '— (sistema)' }}</td>
+          <td class="text-muted">{{ log.ip_address or '—' }}</td>
+          <td style="text-align:right">
+            <a href="{{ url_for('audit.view_log', log_id=log.id) }}" class="btn btn-ghost btn-sm">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination.pages > 1 %}
+  <div class="d-flex gap-1 mt-2 align-center justify-between">
+    <span class="text-muted" style="font-size:0.85rem">Página {{ pagination.page }} de {{ pagination.pages }}</span>
+    <div class="d-flex gap-1">
+      {% if pagination.has_prev %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('audit.list_logs', page=pagination.prev_num, table=filters.table, action=filters.action) }}">
+        <i class="bi bi-chevron-left"></i> Anterior
+      </a>
+      {% endif %}
+      {% if pagination.has_next %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('audit.list_logs', page=pagination.next_num, table=filters.table, action=filters.action) }}">
+        Próxima <i class="bi bi-chevron-right"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty-state"><i class="bi bi-shield-check"></i> Nenhum registro de auditoria.</div>
+  {% endif %}
+</div>
+{% endblock %}

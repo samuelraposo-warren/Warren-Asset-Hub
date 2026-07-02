@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Auditoria #{{ log.id }} — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">Registro de auditoria #{{ log.id }}</h1>
+    <p class="text-muted mb-0">
+      <span class="badge {{ log.action.value | audit_badge }}">{{ log.action.value | audit_label }}</span>
+      em <strong>{{ log.table_name }}</strong> #{{ log.record_id }}
+    </p>
+  </div>
+  <a href="{{ url_for('audit.list_logs') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <div class="card-title">Contexto</div>
+  <dl class="dl-inline form-grid">
+    <div><dt>Data/hora</dt><dd>{{ log.changed_at.strftime('%d/%m/%Y %H:%M:%S') }}</dd></div>
+    <div><dt>Usuário</dt><dd>{{ log.changed_by.name if log.changed_by else '— (sistema / sem request)' }}</dd></div>
+    <div><dt>IP</dt><dd>{{ log.ip_address or '—' }}</dd></div>
+    <div style="grid-column:1/-1"><dt>User-agent</dt><dd class="text-muted">{{ log.user_agent or '—' }}</dd></div>
+  </dl>
+</div>
+
+<div class="card">
+  <div class="card-title">Alterações</div>
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Valor anterior</th>
+          <th>Novo valor</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.key }}</strong></td>
+          <td class="text-muted">{{ row.old if row.old is not none else '—' }}</td>
+          <td class="{{ 'text-primary-accent' if row.changed }}">{{ row.new if row.new is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Sem dados de valores.</p>
+  {% endif %}
+</div>
+{% endblock %}

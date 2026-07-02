@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Ativos — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">Ativos</h1>
+    <p class="text-muted mb-0">{{ assets|length }} ativo(s) encontrado(s)</p>
+  </div>
+  {% if can_edit %}
+  <a href="{{ url_for('assets.new_asset') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg"></i> Novo ativo
+  </a>
+  {% endif %}
+</div>
+
+<div class="card mb-2">
+  <form method="get" class="form-grid" style="align-items:end">
+    <div class="form-group mb-0">
+      <label class="form-label" for="q">Buscar</label>
+      <input type="text" id="q" name="q" class="form-control"
+             value="{{ filters.q }}" placeholder="Patrimônio, série, marca, modelo…">
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="status">Status</label>
+      <select id="status" name="status" class="form-select">
+        <option value="">Todos</option>
+        {% for st in AssetStatus %}
+        <option value="{{ st.name }}" {{ 'selected' if filters.status == st.name }}>
+          {{ st.value | status_label }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="type">Tipo</label>
+      <select id="type" name="type" class="form-select">
+        <option value="">Todos</option>
+        {% for t in asset_types %}
+        <option value="{{ t.id }}" {{ 'selected' if filters.type == t.id }}>{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0 d-flex gap-1">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+      <a href="{{ url_for('assets.list_assets') }}" class="btn btn-ghost">Limpar</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  {% if assets %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Patrimônio</th>
+          <th>Tipo</th>
+          <th>Marca / Modelo</th>
+          <th>Status</th>
+          <th>Responsável</th>
+          <th>Local</th>
+          <th style="text-align:right">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assets %}
+        <tr>
+          <td>
+            <a href="{{ url_for('assets.view_asset', asset_id=a.id) }}">{{ a.asset_tag }}</a>
+          </td>
+          <td>{{ a.asset_type.name if a.asset_type else '—' }}</td>
+          <td>{{ a.brand or '' }} {{ a.model or '' }}{% if not a.brand and not a.model %}—{% endif %}</td>
+          <td><span class="badge {{ a.status.value | status_badge }}">{{ a.status.value | status_label }}</span></td>
+          <td>{{ a.assigned_to.name if a.assigned_to else '—' }}</td>
+          <td>{{ a.location.name if a.location else '—' }}</td>
+          <td>
+            <div class="row-actions">
+              <a href="{{ url_for('assets.view_asset', asset_id=a.id) }}" class="btn btn-ghost btn-sm">
+                <i class="bi bi-eye"></i>
+              </a>
+              {% if can_edit %}
+              <a href="{{ url_for('assets.edit_asset', asset_id=a.id) }}" class="btn btn-ghost btn-sm">
+                <i class="bi bi-pencil"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-inbox"></i>
+    Nenhum ativo encontrado.
+    {% if can_edit %}<br><a href="{{ url_for('assets.new_asset') }}">Cadastrar o primeiro</a>.{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

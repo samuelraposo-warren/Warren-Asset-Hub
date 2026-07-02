@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{{ asset.asset_tag }} — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">{{ asset.asset_tag }}</h1>
+    <p class="text-muted mb-0">
+      {{ asset.asset_type.name if asset.asset_type else '—' }}
+      · <span class="badge {{ asset.status.value | status_badge }}">{{ asset.status.value | status_label }}</span>
+    </p>
+  </div>
+  <div class="d-flex gap-1">
+    <a href="{{ url_for('assets.list_assets') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+    {% if can_edit %}
+    <a href="{{ url_for('assets.assign_asset', asset_id=asset.id) }}" class="btn btn-ghost">
+      <i class="bi bi-arrow-left-right"></i> Atribuir
+    </a>
+    <a href="{{ url_for('assets.edit_asset', asset_id=asset.id) }}" class="btn btn-primary">
+      <i class="bi bi-pencil"></i> Editar
+    </a>
+    <form method="post" action="{{ url_for('assets.delete_asset', asset_id=asset.id) }}"
+          onsubmit="return confirm('Confirmar a baixa deste ativo? Ele deixará de aparecer na listagem.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Dar baixa</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-title">Dados gerais</div>
+  <dl class="dl-inline form-grid">
+    <div><dt>Número de série</dt><dd>{{ asset.serial_number or '—' }}</dd></div>
+    <div><dt>Marca</dt><dd>{{ asset.brand or '—' }}</dd></div>
+    <div><dt>Modelo</dt><dd>{{ asset.model or '—' }}</dd></div>
+    <div><dt>Condição</dt><dd>
+      <span class="badge {{ asset.condition.value | condition_badge }}">{{ asset.condition.value | condition_label }}</span>
+    </dd></div>
+    <div><dt>Responsável</dt><dd>{{ asset.assigned_to.name if asset.assigned_to else '—' }}</dd></div>
+    <div><dt>Localização</dt><dd>{{ asset.location.name if asset.location else '—' }}</dd></div>
+  </dl>
+</div>
+
+<div class="card mb-2">
+  <div class="card-title">Aquisição & garantia</div>
+  <dl class="dl-inline form-grid">
+    <div><dt>Data de compra</dt><dd>{{ asset.purchase_date | date_br }}</dd></div>
+    <div><dt>Fim da garantia</dt><dd>{{ asset.warranty_expiry_date | date_br }}</dd></div>
+    <div><dt>Valor de compra</dt><dd>{{ asset.purchase_price | brl }}</dd></div>
+    <div><dt>Fornecedor</dt><dd>{{ asset.supplier.name if asset.supplier else '—' }}</dd></div>
+    <div><dt>Nota fiscal</dt><dd>{{ asset.invoice_number or '—' }}</dd></div>
+  </dl>
+</div>
+
+{% if spec_cfg and spec %}
+<div class="card mb-2">
+  <div class="card-title">{{ spec_cfg.label }}</div>
+  <dl class="dl-inline form-grid">
+    {% for field in spec_cfg.fields %}
+    {% set val = spec|attr(field.key) %}
+    <div>
+      <dt>{{ field.label }}</dt>
+      <dd>
+        {% if field.type == 'checkbox' %}{{ 'Sim' if val else 'Não' }}
+        {% elif field.type == 'select' %}{{ val.value | humanize if val is not none else '—' }}
+        {% else %}{{ val if val is not none and val != '' else '—' }}{% endif %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% endif %}
+
+{% if asset.notes %}
+<div class="card mb-2">
+  <div class="card-title">Observações</div>
+  <p class="mb-0">{{ asset.notes }}</p>
+</div>
+{% endif %}
+
+<div class="card mb-2">
+  <div class="d-flex align-center justify-between mb-2">
+    <div class="card-title mb-0">Manutenções</div>
+    {% if can_edit %}
+    <a href="{{ url_for('maintenance.new_maintenance', asset_id=asset.id) }}" class="btn btn-ghost btn-sm">
+      <i class="bi bi-plus-lg"></i> Registrar manutenção
+    </a>
+    {% endif %}
+  </div>
+  {% if maintenances %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Tipo</th><th>Executor</th><th>Início</th><th>Conclusão</th><th>Custo</th></tr>
+      </thead>
+      <tbody>
+        {% for m in maintenances %}
+        <tr>
+          <td><span class="badge {{ m.type.value | maintenance_badge }}">{{ m.type.value | maintenance_label }}</span></td>
+          <td>{{ m.performed_by or '—' }}</td>
+          <td>{{ m.started_at | date_br }}</td>
+          <td>{% if m.finished_at %}{{ m.finished_at | date_br }}{% else %}<span class="badge badge-maintenance">Em aberto</span>{% endif %}</td>
+          <td>{{ m.cost | brl }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Nenhuma manutenção registrada.</p>
+  {% endif %}
+</div>
+
+<div class="card mb-2">
+  <div class="card-title">Histórico de movimentações</div>
+  {% if movements %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>De</th>
+          <th>Para</th>
+          <th>Localização</th>
+          <th>Motivo</th>
+          <th>Registrado por</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mv in movements %}
+        <tr>
+          <td>{{ mv.moved_at | date_br }}</td>
+          <td>{{ mv.from_employee.name if mv.from_employee else '—' }}</td>
+          <td>{{ mv.to_employee.name if mv.to_employee else '—' }}</td>
+          <td>
+            {{ mv.from_location.name if mv.from_location else '—' }}
+            &rarr; {{ mv.to_location.name if mv.to_location else '—' }}
+          </td>
+          <td>{{ mv.reason or '—' }}</td>
+          <td>{{ mv.moved_by.name if mv.moved_by else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Nenhuma movimentação registrada.</p>
+  {% endif %}
+</div>
+
+<p class="text-muted" style="font-size:0.8rem">
+  Criado em {{ asset.created_at | date_br }}
+  {% if asset.created_by %} por {{ asset.created_by.name }}{% endif %}
+  · Atualizado em {{ asset.updated_at | date_br }}
+</p>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Nova manutenção' if is_new else 'Editar manutenção' }} — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">{{ 'Nova manutenção' if is_new else 'Editar manutenção' }}</h1>
+  </div>
+  <a href="{{ url_for('maintenance.list_maintenance') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card mb-2">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="asset_id">Ativo *</label>
+        <select class="form-select" id="asset_id" name="asset_id" required>
+          <option value="">Selecione…</option>
+          {% for a in assets %}
+          <option value="{{ a.id }}" {{ 'selected' if record.asset_id == a.id }}>
+            {{ a.asset_tag }}{% if a.brand or a.model %} — {{ a.brand or '' }} {{ a.model or '' }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="type">Tipo *</label>
+        <select class="form-select" id="type" name="type" required>
+          <option value="">Selecione…</option>
+          {% for t in MaintenanceType %}
+          <option value="{{ t.name }}" {{ 'selected' if record.type and record.type.name == t.name }}>
+            {{ t.value | maintenance_label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="performed_by">Executado por (empresa/técnico)</label>
+        <input type="text" class="form-control" id="performed_by" name="performed_by"
+               value="{{ record.performed_by or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="cost">Custo (R$)</label>
+        <input type="text" class="form-control" id="cost" name="cost"
+               value="{{ record.cost if record.cost is not none else '' }}" placeholder="0,00">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="started_at">Início</label>
+        <input type="datetime-local" class="form-control" id="started_at" name="started_at"
+               value="{{ record.started_at.strftime('%Y-%m-%dT%H:%M') if record.started_at else '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="finished_at">Conclusão</label>
+        <input type="datetime-local" class="form-control" id="finished_at" name="finished_at"
+               value="{{ record.finished_at.strftime('%Y-%m-%dT%H:%M') if record.finished_at else '' }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="description">Descrição</label>
+      <textarea class="form-control" id="description" name="description" rows="3">{{ record.description or '' }}</textarea>
+    </div>
+  </div>
+
+  <div class="d-flex gap-1">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> {{ 'Registrar' if is_new else 'Salvar' }}
+    </button>
+    <a href="{{ url_for('maintenance.list_maintenance') }}" class="btn btn-ghost">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

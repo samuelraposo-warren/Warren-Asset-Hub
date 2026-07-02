@@ -1,0 +1,20 @@
+# Ambiente
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Banco / logs
+*.sqlite
+*.db
+*.log
+
+# IDE
+.vscode/
+.idea/

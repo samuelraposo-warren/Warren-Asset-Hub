@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Novo ativo' if is_new else 'Editar ativo' }} — Inventário de TI{% endblock %}
+
+{# ---- Macro: renderiza um input de spec conforme o tipo do campo ---- #}
+{% macro spec_input(field, name, value) %}
+  {% if field.type == 'checkbox' %}
+    <div class="form-check mt-2">
+      <input class="form-check-input" type="checkbox" id="{{ name }}" name="{{ name }}"
+             {{ 'checked' if value }}>
+      <label class="form-label mb-0" for="{{ name }}">{{ field.label }}</label>
+    </div>
+  {% else %}
+    <div class="form-group">
+      <label class="form-label" for="{{ name }}">{{ field.label }}</label>
+      {% if field.type == 'select' %}
+        <select class="form-select" id="{{ name }}" name="{{ name }}">
+          <option value="">—</option>
+          {% for member in field.enum %}
+          <option value="{{ member.name }}"
+            {{ 'selected' if value is not none and value.name == member.name }}>
+            {{ member.value | humanize }}
+          </option>
+          {% endfor %}
+        </select>
+      {% elif field.type == 'number' %}
+        <input type="number" class="form-control" id="{{ name }}" name="{{ name }}"
+               value="{{ value if value is not none else '' }}">
+      {% else %}
+        <input type="text" class="form-control" id="{{ name }}" name="{{ name }}"
+               value="{{ value if value is not none else '' }}">
+      {% endif %}
+    </div>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">{{ 'Novo ativo' if is_new else 'Editar ativo' }}</h1>
+    {% if not is_new %}<p class="text-muted mb-0">{{ asset.asset_tag }}</p>{% endif %}
+  </div>
+  <a href="{{ url_for('assets.list_assets') }}" class="btn btn-ghost">
+    <i class="bi bi-arrow-left"></i> Voltar
+  </a>
+</div>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card mb-2">
+    <div class="form-section-title" style="margin-top:0">Dados gerais</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="asset_tag">Patrimônio *</label>
+        <input type="text" class="form-control" id="asset_tag" name="asset_tag"
+               value="{{ asset.asset_tag or '' }}" placeholder="TI-2024-001" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="serial_number">Número de série</label>
+        <input type="text" class="form-control" id="serial_number" name="serial_number"
+               value="{{ asset.serial_number or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="asset_type_id">Tipo *</label>
+        <select class="form-select" id="asset_type_id" name="asset_type_id" required
+                onchange="toggleSpecs(this.value)">
+          <option value="">Selecione…</option>
+          {% for t in asset_types %}
+          <option value="{{ t.id }}" data-slug="{{ t.slug }}"
+            {{ 'selected' if asset.asset_type_id == t.id }}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="brand">Marca</label>
+        <input type="text" class="form-control" id="brand" name="brand" value="{{ asset.brand or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="model">Modelo</label>
+        <input type="text" class="form-control" id="model" name="model" value="{{ asset.model or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="status">Status</label>
+        <select class="form-select" id="status" name="status">
+          {% for st in AssetStatus %}
+          <option value="{{ st.name }}"
+            {{ 'selected' if asset.status and asset.status.name == st.name else ('selected' if not asset.status and st.name == 'ACTIVE') }}>
+            {{ st.value | status_label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="condition">Condição</label>
+        <select class="form-select" id="condition" name="condition">
+          {% for c in AssetCondition %}
+          <option value="{{ c.name }}"
+            {{ 'selected' if asset.condition and asset.condition.name == c.name else ('selected' if not asset.condition and c.name == 'GOOD') }}>
+            {{ c.value | condition_label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="form-section-title" style="margin-top:0">Aquisição & garantia</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="purchase_date">Data de compra</label>
+        <input type="date" class="form-control" id="purchase_date" name="purchase_date"
+               value="{{ asset.purchase_date.strftime('%Y-%m-%d') if asset.purchase_date else '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="warranty_expiry_date">Fim da garantia</label>
+        <input type="date" class="form-control" id="warranty_expiry_date" name="warranty_expiry_date"
+               value="{{ asset.warranty_expiry_date.strftime('%Y-%m-%d') if asset.warranty_expiry_date else '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="purchase_price">Valor de compra (R$)</label>
+        <input type="text" class="form-control" id="purchase_price" name="purchase_price"
+               value="{{ asset.purchase_price if asset.purchase_price is not none else '' }}" placeholder="0,00">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="supplier_id">Fornecedor</label>
+        <select class="form-select" id="supplier_id" name="supplier_id">
+          <option value="">—</option>
+          {% for sup in suppliers %}
+          <option value="{{ sup.id }}" {{ 'selected' if asset.supplier_id == sup.id }}>{{ sup.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="invoice_number">Nota fiscal</label>
+        <input type="text" class="form-control" id="invoice_number" name="invoice_number"
+               value="{{ asset.invoice_number or '' }}">
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-2">
+    <div class="form-section-title" style="margin-top:0">Alocação</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="location_id">Localização</label>
+        <select class="form-select" id="location_id" name="location_id">
+          <option value="">—</option>
+          {% for loc in locations %}
+          <option value="{{ loc.id }}" {{ 'selected' if asset.location_id == loc.id }}>{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="assigned_to_id">Responsável</label>
+        <select class="form-select" id="assigned_to_id" name="assigned_to_id">
+          <option value="">—</option>
+          {% for emp in employees %}
+          <option value="{{ emp.id }}" {{ 'selected' if asset.assigned_to_id == emp.id }}>{{ emp.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="notes">Observações</label>
+      <textarea class="form-control" id="notes" name="notes" rows="3">{{ asset.notes or '' }}</textarea>
+    </div>
+  </div>
+
+  {# ---- Seções de spec (uma por tipo, exibida conforme o tipo escolhido) ---- #}
+  {% for slug, cfg in spec_config.items() %}
+  <div class="card mb-2 spec-section" data-slug="{{ slug }}" style="display:none">
+    <div class="form-section-title" style="margin-top:0">{{ cfg.label }}</div>
+    <div class="form-grid">
+      {% set current_slug = asset.asset_type.slug if asset.asset_type else None %}
+      {% set spec = (asset|attr(cfg.rel)) if current_slug == slug else None %}
+      {% for field in cfg.fields %}
+        {{ spec_input(field, 'spec__' ~ slug ~ '__' ~ field.key, (spec|attr(field.key)) if spec else none) }}
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="d-flex gap-1">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> {{ 'Criar ativo' if is_new else 'Salvar alterações' }}
+    </button>
+    <a href="{{ url_for('assets.list_assets') }}" class="btn btn-ghost">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleSpecs(typeId) {
+    var sel = document.getElementById('asset_type_id');
+    var opt = sel.options[sel.selectedIndex];
+    var slug = opt ? opt.getAttribute('data-slug') : null;
+    document.querySelectorAll('.spec-section').forEach(function (el) {
+      el.style.display = (el.getAttribute('data-slug') === slug) ? '' : 'none';
+    });
+  }
+  // Estado inicial (edição já vem com um tipo selecionado).
+  document.addEventListener('DOMContentLoaded', function () {
+    toggleSpecs(document.getElementById('asset_type_id').value);
+  });
+</script>
+{% endblock %}

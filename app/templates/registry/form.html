@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ ('Novo(a) ' if is_new else 'Editar ') ~ cfg.singular }} — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">{{ ('Novo(a) ' if is_new else 'Editar ') ~ cfg.singular.lower() }}</h1>
+  </div>
+  <a href="{{ url_for('registry.list_entity', entity=entity) }}" class="btn btn-ghost">
+    <i class="bi bi-arrow-left"></i> Voltar
+  </a>
+</div>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card mb-2">
+    <div class="form-grid">
+      {% for field in cfg.fields %}
+        {% set val = obj|attr(field.key) %}
+        {% if field.type == 'textarea' %}
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label" for="{{ field.key }}">{{ field.label }}</label>
+          <textarea class="form-control" id="{{ field.key }}" name="{{ field.key }}" rows="3">{{ val or '' }}</textarea>
+        </div>
+        {% elif field.type == 'fk' %}
+        <div class="form-group">
+          <label class="form-label" for="{{ field.key }}">{{ field.label }}{{ ' *' if field.required }}</label>
+          <select class="form-select" id="{{ field.key }}" name="{{ field.key }}">
+            <option value="">—</option>
+            {% for opt in fk_options[field.key] %}
+            <option value="{{ opt.id }}" {{ 'selected' if val == opt.id }}>{{ opt|attr(field.display) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% else %}
+        <div class="form-group">
+          <label class="form-label" for="{{ field.key }}">{{ field.label }}{{ ' *' if field.required }}</label>
+          <input type="{{ 'email' if field.type == 'email' else ('number' if field.type == 'number' else 'text') }}"
+                 class="form-control" id="{{ field.key }}" name="{{ field.key }}"
+                 value="{{ val if val is not none else '' }}" {{ 'required' if field.required }}>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-1">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> {{ 'Cadastrar' if is_new else 'Salvar' }}
+    </button>
+    <a href="{{ url_for('registry.list_entity', entity=entity) }}" class="btn btn-ghost">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
