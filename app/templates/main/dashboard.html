@@ -1,5 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Painel — Inventário de TI{% endblock %}
+{% block title %}Painel — {{ SETTINGS.company_name }}{% endblock %}
+
+{% set widget_labels = {
+  'stats': 'Indicadores',
+  'chart_status': 'Gráfico — por status',
+  'chart_type': 'Gráfico — por tipo',
+  'warranty': 'Garantias vencendo',
+  'unassigned': 'Sem responsável',
+  'open_maintenance': 'Manutenções abertas',
+  'status_table': 'Ativos por status (tabela)'
+} %}
 
 {% block content %}
 <div class="page-header">
@@ -7,127 +17,294 @@
     <h1 class="mb-0">Painel</h1>
     <p class="text-muted mb-0">Visão geral do inventário</p>
   </div>
-  <a href="{{ url_for('assets.new_asset') }}" class="btn btn-primary">
-    <i class="bi bi-plus-lg"></i> Novo ativo
-  </a>
-</div>
-
-<div class="stat-grid">
-  <div class="card stat-card hoverable">
-    <div class="stat-value">{{ stats.total_assets }}</div>
-    <div class="stat-label"><i class="bi bi-hdd-stack"></i> Ativos</div>
-  </div>
-  <div class="card stat-card hoverable">
-    <div class="stat-value" style="font-size:1.6rem">{{ stats.total_value | brl }}</div>
-    <div class="stat-label"><i class="bi bi-cash-stack"></i> Valor do inventário</div>
-  </div>
-  <div class="card stat-card hoverable">
-    <div class="stat-value">{{ stats.warranty_count }}</div>
-    <div class="stat-label"><i class="bi bi-shield-exclamation"></i> Garantias vencendo</div>
-  </div>
-  <div class="card stat-card hoverable">
-    <div class="stat-value">{{ stats.unassigned_count }}</div>
-    <div class="stat-label"><i class="bi bi-person-dash"></i> Sem responsável</div>
-  </div>
-  <div class="card stat-card hoverable">
-    <div class="stat-value">{{ stats.open_maintenance_count }}</div>
-    <div class="stat-label"><i class="bi bi-tools"></i> Manutenções abertas</div>
-  </div>
-  <div class="card stat-card hoverable">
-    <div class="stat-value">{{ stats.employees }}</div>
-    <div class="stat-label"><i class="bi bi-people"></i> Colaboradores</div>
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
+    <button type="button" id="editDashBtn" class="btn btn-ghost">
+      <i class="bi bi-pencil-square"></i> Editar painel
+    </button>
+    <div id="editDashActions" class="d-flex gap-1" style="display:none !important">
+      <button type="button" id="saveDashBtn" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+      <button type="button" id="resetDashBtn" class="btn btn-ghost"><i class="bi bi-arrow-counterclockwise"></i> Restaurar padrão</button>
+      <button type="button" id="cancelDashBtn" class="btn btn-ghost">Cancelar</button>
+    </div>
+    <a href="{{ url_for('assets.new_asset') }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Novo ativo
+    </a>
   </div>
 </div>
 
-<div class="form-grid" style="align-items:start">
-  <div class="card mb-2">
-    <div class="card-title"><i class="bi bi-shield-exclamation"></i> Garantias vencendo (próximos {{ warranty_window }} dias)</div>
-    {% if warranty_expiring %}
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Patrimônio</th><th>Tipo</th><th>Vence em</th></tr></thead>
-        <tbody>
-          {% for a in warranty_expiring %}
-          <tr>
-            <td><a href="{{ url_for('assets.view_asset', asset_id=a.id) }}">{{ a.asset_tag }}</a></td>
-            <td>{{ a.asset_type.name if a.asset_type else '—' }}</td>
-            <td>{{ a.warranty_expiry_date | date_br }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p class="text-muted mb-0">Nenhuma garantia vencendo nesse período.</p>
-    {% endif %}
-  </div>
+<p id="editHint" class="text-muted" style="display:none">
+  <i class="bi bi-info-circle"></i>
+  Arraste os blocos pela alça para reordenar, use o olho para ocultar/mostrar, e clique em <strong>Salvar</strong>.
+</p>
 
-  <div class="card mb-2">
-    <div class="card-title"><i class="bi bi-person-dash"></i> Ativos sem responsável</div>
-    {% if unassigned %}
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Patrimônio</th><th>Tipo</th><th>Local</th></tr></thead>
-        <tbody>
-          {% for a in unassigned %}
-          <tr>
-            <td><a href="{{ url_for('assets.view_asset', asset_id=a.id) }}">{{ a.asset_tag }}</a></td>
-            <td>{{ a.asset_type.name if a.asset_type else '—' }}</td>
-            <td>{{ a.location.name if a.location else '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<div id="dashGrid" class="dash-grid">
+  {% for w in layout_order %}
+  <section class="dash-widget {{ 'span-2' if w in ('stats',) }} {{ 'is-hidden' if w in layout_hidden }}" data-widget="{{ w }}">
+    <div class="widget-bar">
+      <span class="drag-handle" title="Arrastar"><i class="bi bi-grip-vertical"></i></span>
+      <span class="widget-name">{{ widget_labels.get(w, w) }}</span>
+      <button type="button" class="widget-toggle" title="Ocultar/mostrar"><i class="bi bi-eye"></i></button>
     </div>
-    {% if unassigned_total > unassigned|length %}
-    <p class="text-muted mt-2 mb-0" style="font-size:0.8rem">+ {{ unassigned_total - unassigned|length }} outro(s)…</p>
-    {% endif %}
-    {% else %}
-    <p class="text-muted mb-0">Todos os ativos ativos têm responsável. 👍</p>
-    {% endif %}
-  </div>
+    <div class="widget-body">
+
+      {% if w == 'stats' %}
+      <div class="stat-grid" style="margin-bottom:0">
+        <div class="card stat-card hoverable">
+          <div class="stat-value">{{ stats.total_assets }}</div>
+          <div class="stat-label"><i class="bi bi-hdd-stack"></i> Ativos</div>
+        </div>
+        <div class="card stat-card hoverable">
+          <div class="stat-value" style="font-size:1.6rem">{{ stats.total_value | brl }}</div>
+          <div class="stat-label"><i class="bi bi-cash-stack"></i> Valor do inventário</div>
+        </div>
+        <div class="card stat-card hoverable">
+          <div class="stat-value">{{ stats.warranty_count }}</div>
+          <div class="stat-label"><i class="bi bi-shield-exclamation"></i> Garantias vencendo</div>
+        </div>
+        <div class="card stat-card hoverable">
+          <div class="stat-value">{{ stats.unassigned_count }}</div>
+          <div class="stat-label"><i class="bi bi-person-dash"></i> Sem responsável</div>
+        </div>
+        <div class="card stat-card hoverable">
+          <div class="stat-value">{{ stats.open_maintenance_count }}</div>
+          <div class="stat-label"><i class="bi bi-tools"></i> Manutenções abertas</div>
+        </div>
+        <div class="card stat-card hoverable">
+          <div class="stat-value">{{ stats.employees }}</div>
+          <div class="stat-label"><i class="bi bi-people"></i> Colaboradores</div>
+        </div>
+      </div>
+
+      {% elif w == 'chart_status' %}
+      <div class="card">
+        <div class="card-title"><i class="bi bi-pie-chart"></i> Ativos por status</div>
+        <div class="chart-box"><canvas id="chartStatus"></canvas></div>
+      </div>
+
+      {% elif w == 'chart_type' %}
+      <div class="card">
+        <div class="card-title"><i class="bi bi-bar-chart"></i> Ativos por tipo</div>
+        <div class="chart-box"><canvas id="chartType"></canvas></div>
+      </div>
+
+      {% elif w == 'warranty' %}
+      <div class="card">
+        <div class="card-title"><i class="bi bi-shield-exclamation"></i> Garantias vencendo (próximos {{ warranty_window }} dias)</div>
+        {% if warranty_expiring %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Patrimônio</th><th>Tipo</th><th>Vence em</th></tr></thead>
+            <tbody>
+              {% for a in warranty_expiring %}
+              <tr>
+                <td><a href="{{ url_for('assets.view_asset', asset_id=a.id) }}">{{ a.asset_tag }}</a></td>
+                <td>{{ a.asset_type.name if a.asset_type else '—' }}</td>
+                <td>{{ a.warranty_expiry_date | date_br }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Nenhuma garantia vencendo nesse período.</p>
+        {% endif %}
+      </div>
+
+      {% elif w == 'unassigned' %}
+      <div class="card">
+        <div class="card-title"><i class="bi bi-person-dash"></i> Ativos sem responsável</div>
+        {% if unassigned %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Patrimônio</th><th>Tipo</th><th>Local</th></tr></thead>
+            <tbody>
+              {% for a in unassigned %}
+              <tr>
+                <td><a href="{{ url_for('assets.view_asset', asset_id=a.id) }}">{{ a.asset_tag }}</a></td>
+                <td>{{ a.asset_type.name if a.asset_type else '—' }}</td>
+                <td>{{ a.location.name if a.location else '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if unassigned_total > unassigned|length %}
+        <p class="text-muted mt-2 mb-0" style="font-size:0.8rem">+ {{ unassigned_total - unassigned|length }} outro(s)…</p>
+        {% endif %}
+        {% else %}
+        <p class="text-muted mb-0">Todos os ativos ativos têm responsável. 👍</p>
+        {% endif %}
+      </div>
+
+      {% elif w == 'open_maintenance' %}
+      <div class="card">
+        <div class="d-flex align-center justify-between mb-2">
+          <div class="card-title mb-0"><i class="bi bi-tools"></i> Manutenções em aberto</div>
+          <a href="{{ url_for('maintenance.list_maintenance', status='open') }}" class="text-muted" style="font-size:0.8rem">ver todas</a>
+        </div>
+        {% if open_maintenances %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Ativo</th><th>Tipo</th><th>Início</th></tr></thead>
+            <tbody>
+              {% for m in open_maintenances %}
+              <tr>
+                <td><a href="{{ url_for('assets.view_asset', asset_id=m.asset_id) }}">{{ m.asset.asset_tag if m.asset else '—' }}</a></td>
+                <td><span class="badge {{ m.type.value | maintenance_badge }}">{{ m.type.value | maintenance_label }}</span></td>
+                <td>{{ m.started_at | date_br }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Nenhuma manutenção em aberto.</p>
+        {% endif %}
+      </div>
+
+      {% elif w == 'status_table' %}
+      <div class="card">
+        <div class="card-title">Ativos por status</div>
+        <div class="table-wrap">
+          <table class="table">
+            <tbody>
+              {% for status, count in stats.status_counts.items() %}
+              <tr>
+                <td>{{ status.value | status_label }}</td>
+                <td style="text-align:right"><span class="badge {{ status.value | status_badge }}">{{ count }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </section>
+  {% endfor %}
 </div>
+{% endblock %}
 
-<div class="form-grid" style="align-items:start">
-  <div class="card mb-2">
-    <div class="d-flex align-center justify-between mb-2">
-      <div class="card-title mb-0"><i class="bi bi-tools"></i> Manutenções em aberto</div>
-      <a href="{{ url_for('maintenance.list_maintenance', status='open') }}" class="text-muted" style="font-size:0.8rem">ver todas</a>
-    </div>
-    {% if open_maintenances %}
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Ativo</th><th>Tipo</th><th>Início</th></tr></thead>
-        <tbody>
-          {% for m in open_maintenances %}
-          <tr>
-            <td><a href="{{ url_for('assets.view_asset', asset_id=m.asset_id) }}">{{ m.asset.asset_tag if m.asset else '—' }}</a></td>
-            <td><span class="badge {{ m.type.value | maintenance_badge }}">{{ m.type.value | maintenance_label }}</span></td>
-            <td>{{ m.started_at | date_br }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p class="text-muted mb-0">Nenhuma manutenção em aberto.</p>
-    {% endif %}
-  </div>
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var CHART_STATUS = {{ chart_status | tojson }};
+  var CHART_TYPE = {{ chart_type | tojson }};
+  var SAVE_URL = "{{ url_for('main.save_layout') }}";
+  var RESET_URL = "{{ url_for('main.reset_layout') }}";
+  var csrf = document.querySelector('meta[name="csrf-token"]');
+  csrf = csrf ? csrf.getAttribute("content") : "";
 
-  <div class="card mb-2">
-    <div class="card-title">Ativos por status</div>
-    <div class="table-wrap">
-      <table class="table">
-        <tbody>
-          {% for status, count in stats.status_counts.items() %}
-          <tr>
-            <td>{{ status.value | status_label }}</td>
-            <td style="text-align:right"><span class="badge {{ status.value | status_badge }}">{{ count }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
+  var textMuted = "rgba(255,255,255,0.6)";
+  var gridColor = "rgba(255,255,255,0.08)";
+  var palette = ["#58D68D", "#5DADE2", "#F5B041", "#E74C3C", "#AF7AC5", "#48C9B0", "#F1948A", "#85C1E9"];
+
+  /* ---------- Gráficos ---------- */
+  function buildCharts() {
+    if (typeof Chart === "undefined") return;
+    Chart.defaults.color = textMuted;
+    Chart.defaults.font.family = "'Inter', sans-serif";
+
+    var elS = document.getElementById("chartStatus");
+    if (elS) {
+      new Chart(elS, {
+        type: "doughnut",
+        data: {
+          labels: CHART_STATUS.labels,
+          datasets: [{ data: CHART_STATUS.data, backgroundColor: palette, borderColor: "#2D1410", borderWidth: 2 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: "right", labels: { boxWidth: 12, padding: 10 } } }
+        }
+      });
+    }
+
+    var elT = document.getElementById("chartType");
+    if (elT) {
+      new Chart(elT, {
+        type: "bar",
+        data: {
+          labels: CHART_TYPE.labels,
+          datasets: [{ label: "Ativos", data: CHART_TYPE.data, backgroundColor: "#C0392B", borderRadius: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: textMuted } },
+            y: { grid: { color: gridColor }, ticks: { color: textMuted, precision: 0 }, beginAtZero: true }
+          }
+        }
+      });
+    }
+  }
+
+  /* ---------- Modo de edição do painel ---------- */
+  var grid = document.getElementById("dashGrid");
+  var editBtn = document.getElementById("editDashBtn");
+  var actions = document.getElementById("editDashActions");
+  var hint = document.getElementById("editHint");
+  var sortable = null;
+
+  function setEditing(on) {
+    grid.classList.toggle("editing", on);
+    editBtn.style.display = on ? "none" : "";
+    actions.style.setProperty("display", on ? "flex" : "none", "important");
+    hint.style.display = on ? "" : "none";
+    if (on && typeof Sortable !== "undefined" && !sortable) {
+      sortable = Sortable.create(grid, { handle: ".drag-handle", animation: 150, ghostClass: "widget-ghost" });
+    }
+  }
+
+  function collectLayout() {
+    var order = [], hidden = [];
+    grid.querySelectorAll(".dash-widget").forEach(function (el) {
+      var id = el.getAttribute("data-widget");
+      order.push(id);
+      if (el.classList.contains("is-hidden")) hidden.push(id);
+    });
+    return { order: order, hidden: hidden };
+  }
+
+  function post(url, body) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+      body: body ? JSON.stringify(body) : "{}"
+    });
+  }
+
+  if (editBtn) {
+    editBtn.addEventListener("click", function () { setEditing(true); });
+    document.getElementById("cancelDashBtn").addEventListener("click", function () { window.location.reload(); });
+    document.getElementById("saveDashBtn").addEventListener("click", function () {
+      post(SAVE_URL, collectLayout()).then(function () { window.location.reload(); });
+    });
+    document.getElementById("resetDashBtn").addEventListener("click", function () {
+      post(RESET_URL, {}).then(function () { window.location.reload(); });
+    });
+
+    grid.addEventListener("click", function (e) {
+      var btn = e.target.closest(".widget-toggle");
+      if (!btn) return;
+      var widget = btn.closest(".dash-widget");
+      var hiddenNow = widget.classList.toggle("is-hidden");
+      var icon = btn.querySelector("i");
+      if (icon) icon.className = hiddenNow ? "bi bi-eye-slash" : "bi bi-eye";
+    });
+
+    // Ajusta os ícones de olho conforme o estado inicial (ocultos).
+    grid.querySelectorAll(".dash-widget.is-hidden .widget-toggle i").forEach(function (i) {
+      i.className = "bi bi-eye-slash";
+    });
+  }
+
+  buildCharts();
+})();
+</script>
 {% endblock %}

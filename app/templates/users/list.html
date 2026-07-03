@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Usuários — Inventário de TI{% endblock %}
+
+{% set role_badge = {'ADMIN': 'badge-defective', 'TI': 'badge-loaned', 'VIEWER': 'badge-neutral'} %}
+{% set role_label = {'ADMIN': 'Administrador', 'TI': 'TI', 'VIEWER': 'Consulta'} %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-people"></i> Usuários</h1>
+    <p class="text-muted mb-0">{{ users|length }} usuário(s) · acesso ao sistema</p>
+  </div>
+  <a href="{{ url_for('users.new_user') }}" class="btn btn-primary">
+    <i class="bi bi-person-plus"></i> Novo usuário
+  </a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>E-mail</th>
+          <th>Papel</th>
+          <th>Situação</th>
+          <th>Último acesso</th>
+          <th style="text-align:right">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.name }}{% if u.id == current_user.id %} <span class="text-muted">(você)</span>{% endif %}</td>
+          <td class="text-muted">{{ u.email }}</td>
+          <td><span class="badge {{ role_badge.get(u.role.name, 'badge-neutral') }}">{{ role_label.get(u.role.name, u.role.value) }}</span></td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge badge-active">Ativo</span>
+            {% else %}
+              <span class="badge badge-inactive">Inativo</span>
+            {% endif %}
+          </td>
+          <td class="text-muted">{% if u.last_login %}{{ u.last_login.strftime('%d/%m/%Y %H:%M') }}{% else %}—{% endif %}</td>
+          <td>
+            <div class="row-actions">
+              <a href="{{ url_for('users.edit_user', user_id=u.id) }}" class="btn btn-ghost btn-sm">
+                <i class="bi bi-pencil"></i> Editar
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

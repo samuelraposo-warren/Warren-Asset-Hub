@@ -161,6 +161,16 @@
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label" for="image_url">Foto do equipamento (link do Google Drive)</label>
+      <input type="url" class="form-control" id="image_url" name="image_url"
+             value="{{ asset.image_url or '' }}"
+             placeholder="Cole aqui o link de compartilhamento da foto no Drive">
+      <small class="text-muted">
+        A imagem precisa estar compartilhada como "qualquer pessoa com o link".
+        Nada é enviado ao servidor — guardamos apenas o link.
+      </small>
+    </div>
+    <div class="form-group">
       <label class="form-label" for="notes">Observações</label>
       <textarea class="form-control" id="notes" name="notes" rows="3">{{ asset.notes or '' }}</textarea>
     </div>

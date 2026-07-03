@@ -10,3 +10,10 @@ cryptography==43.0.1
 python-dotenv==1.0.1
 email-validator==2.2.0
 Werkzeug==3.0.4
+
+# --- Recursos extras (jul/2026) ---
+# Somente bibliotecas em Python puro (sem compilação) — funcionam em
+# qualquer versão do Python, inclusive as mais novas.
+openpyxl==3.1.5     # exportação para Excel (.xlsx)
+qrcode==7.4.2       # etiqueta com QR Code (gerado em SVG, sem Pillow)
+fpdf2==2.7.9        # geração de PDF (termo de responsabilidade)

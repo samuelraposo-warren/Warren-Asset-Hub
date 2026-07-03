@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Novo usuário' if is_new else 'Editar usuário' }} — Inventário de TI{% endblock %}
+
+{% set role_label = {'ADMIN': 'Administrador (acesso total)', 'TI': 'TI (cadastra e edita)', 'VIEWER': 'Consulta (somente leitura)'} %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">{{ 'Novo usuário' if is_new else 'Editar usuário' }}</h1>
+    {% if not is_new %}<p class="text-muted mb-0">{{ user.email }}</p>{% endif %}
+  </div>
+  <a href="{{ url_for('users.list_users') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <form method="post" action="{{ url_for('users.new_user') if is_new else url_for('users.edit_user', user_id=user.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="name">Nome *</label>
+        <input type="text" id="name" name="name" class="form-control" required
+               value="{{ user.name if user else '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">E-mail *</label>
+        <input type="email" id="email" name="email" class="form-control"
+               value="{{ user.email if user else '' }}"
+               {{ 'required' if is_new }} {{ 'readonly' if not is_new }}>
+        {% if not is_new %}<small class="text-muted">O e-mail não pode ser alterado.</small>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="role">Papel</label>
+        <select id="role" name="role" class="form-select">
+          {% for r in roles %}
+          <option value="{{ r.name }}"
+            {{ 'selected' if user and user.role == r else ('selected' if not user and r.name == 'VIEWER') }}>
+            {{ role_label.get(r.name, r.value) }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if is_new %}
+      <div class="form-group">
+        <label class="form-label" for="password">Senha temporária *</label>
+        <input type="text" id="password" name="password" class="form-control"
+               placeholder="mín. 6 caracteres" required>
+        <small class="text-muted">Entregue à pessoa; ela troca no primeiro acesso.</small>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="form-check mb-2" style="margin-top:0.5rem">
+      <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
+             {{ 'checked' if (user is none) or user.is_active }}>
+      <label class="form-label mb-0" for="is_active">Usuário ativo (pode fazer login)</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> {{ 'Criar usuário' if is_new else 'Salvar alterações' }}
+    </button>
+  </form>
+</div>
+
+{% if not is_new %}
+<div class="card">
+  <div class="form-section-title" style="margin-top:0">Redefinir senha</div>
+  <form method="post" action="{{ url_for('users.reset_password', user_id=user.id) }}"
+        onsubmit="return confirm('Redefinir a senha deste usuário?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid" style="align-items:end">
+      <div class="form-group mb-0">
+        <label class="form-label" for="reset_password">Nova senha</label>
+        <input type="text" id="reset_password" name="password" class="form-control"
+               placeholder="mín. 6 caracteres" required>
+      </div>
+      <div class="form-group mb-0">
+        <button type="submit" class="btn btn-ghost"><i class="bi bi-key"></i> Redefinir senha</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

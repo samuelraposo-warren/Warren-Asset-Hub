@@ -12,6 +12,9 @@ def register_blueprints(app):
     from app.routes.main import main_bp
     from app.routes.maintenance import maintenance_bp
     from app.routes.registry import registry_bp
+    from app.routes.employees import employees_bp
+    from app.routes.settings import settings_bp
+    from app.routes.users import users_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -19,3 +22,6 @@ def register_blueprints(app):
     app.register_blueprint(maintenance_bp)
     app.register_blueprint(registry_bp)
     app.register_blueprint(audit_bp)
+    app.register_blueprint(users_bp)
+    app.register_blueprint(settings_bp)
+    app.register_blueprint(employees_bp)

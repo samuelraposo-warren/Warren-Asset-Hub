@@ -5,20 +5,25 @@
 <div class="page-header">
   <div>
     <h1 class="mb-0">Ativos</h1>
-    <p class="text-muted mb-0">{{ assets|length }} ativo(s) encontrado(s)</p>
+    <p class="text-muted mb-0">{{ pagination.total }} ativo(s) encontrado(s)</p>
   </div>
-  {% if can_edit %}
-  <a href="{{ url_for('assets.new_asset') }}" class="btn btn-primary">
-    <i class="bi bi-plus-lg"></i> Novo ativo
-  </a>
-  {% endif %}
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
+    <a href="{{ url_for('assets.export_assets', **filters) }}" class="btn btn-ghost">
+      <i class="bi bi-file-earmark-excel"></i> Exportar
+    </a>
+    {% if can_edit %}
+    <a href="{{ url_for('assets.new_asset') }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Novo ativo
+    </a>
+    {% endif %}
+  </div>
 </div>
 
 <div class="card mb-2">
-  <form method="get" class="form-grid" style="align-items:end">
+  <form method="get" class="form-grid" style="align-items:end" data-autosubmit>
     <div class="form-group mb-0">
       <label class="form-label" for="q">Buscar</label>
-      <input type="text" id="q" name="q" class="form-control"
+      <input type="text" id="q" name="q" class="form-control" autocomplete="off"
              value="{{ filters.q }}" placeholder="Patrimônio, série, marca, modelo…">
     </div>
     <div class="form-group mb-0">
@@ -42,7 +47,7 @@
       </select>
     </div>
     <div class="form-group mb-0 d-flex gap-1">
-      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+      <noscript><button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button></noscript>
       <a href="{{ url_for('assets.list_assets') }}" class="btn btn-ghost">Limpar</a>
     </div>
   </form>
@@ -96,6 +101,24 @@
     <i class="bi bi-inbox"></i>
     Nenhum ativo encontrado.
     {% if can_edit %}<br><a href="{{ url_for('assets.new_asset') }}">Cadastrar o primeiro</a>.{% endif %}
+  </div>
+  {% endif %}
+
+  {% if pagination.pages > 1 %}
+  <div class="d-flex gap-1 mt-2 align-center justify-between">
+    <span class="text-muted" style="font-size:0.85rem">Página {{ pagination.page }} de {{ pagination.pages }}</span>
+    <div class="d-flex gap-1">
+      {% if pagination.has_prev %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('assets.list_assets', page=pagination.prev_num, **filters) }}">
+        <i class="bi bi-chevron-left"></i> Anterior
+      </a>
+      {% endif %}
+      {% if pagination.has_next %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('assets.list_assets', page=pagination.next_num, **filters) }}">
+        Próxima <i class="bi bi-chevron-right"></i>
+      </a>
+      {% endif %}
+    </div>
   </div>
   {% endif %}
 </div>

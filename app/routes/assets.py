@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from flask import (
     Blueprint,
     abort,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -141,6 +142,7 @@ def _apply_form(asset, form):
     asset.invoice_number = _str_or_none(form.get("invoice_number"))
     asset.location_id = _int_or_none(form.get("location_id"))
     asset.assigned_to_id = _int_or_none(form.get("assigned_to_id"))
+    asset.image_url = _str_or_none(form.get("image_url"))
     asset.notes = _str_or_none(form.get("notes"))
 
     if asset.created_by_id is None and current_user.is_authenticated:
@@ -168,17 +170,18 @@ def _form_context():
 # ---------------------------------------------------------------------------
 # Rotas
 # ---------------------------------------------------------------------------
-@assets_bp.route("/")
-@login_required
-def list_assets():
+def _filtered_query(args):
+    """Aplica os filtros da listagem (status, tipo, busca) e devolve
+    (query, filtros)."""
     query = Asset.query.filter(Asset.is_active.is_(True))
-
-    status = request.args.get("status") or ""
-    type_id = _int_or_none(request.args.get("type"))
-    search = (request.args.get("q") or "").strip()
+    status = args.get("status") or ""
+    type_id = _int_or_none(args.get("type"))
+    search = (args.get("q") or "").strip()
 
     if status:
-        query = query.filter(Asset.status == _enum_or_default(AssetStatus, status, None))
+        st = _enum_or_default(AssetStatus, status, None)
+        if st is not None:
+            query = query.filter(Asset.status == st)
     if type_id:
         query = query.filter(Asset.asset_type_id == type_id)
     if search:
@@ -191,15 +194,245 @@ def list_assets():
                 Asset.model.ilike(like),
             )
         )
+    return query.order_by(Asset.created_at.desc()), {
+        "status": status, "type": type_id, "q": search,
+    }
 
-    assets = query.order_by(Asset.created_at.desc()).all()
+
+def _rows_per_page():
+    try:
+        return int((current_user.get_pref("appearance", {}) or {}).get("rows_per_page", 30))
+    except Exception:  # noqa: BLE001
+        return 30
+
+
+@assets_bp.route("/")
+@login_required
+def list_assets():
+    query, filters = _filtered_query(request.args)
+    page = request.args.get("page", 1, type=int)
+    pagination = query.paginate(page=page, per_page=_rows_per_page(), error_out=False)
     return render_template(
         "assets/list.html",
-        assets=assets,
+        assets=pagination.items,
+        pagination=pagination,
         asset_types=AssetType.query.order_by(AssetType.name).all(),
-        filters={"status": status, "type": type_id, "q": search},
+        filters=filters,
         can_edit=current_user.role in _EDITORS,
     )
+
+
+@assets_bp.route("/export")
+@login_required
+def export_assets():
+    """Exporta a listagem filtrada de ativos para um arquivo .xlsx."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font
+    except ImportError:
+        current_app.logger.warning("Exportação Excel indisponível: 'openpyxl' não instalado.")
+        flash("Não foi possível exportar para Excel agora. Contate o administrador do sistema.", "warning")
+        return redirect(url_for("assets.list_assets", **request.args))
+
+    query, _ = _filtered_query(request.args)
+    assets = query.all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Ativos"
+    headers = [
+        "Patrimônio", "Série", "Tipo", "Marca", "Modelo", "Status", "Condição",
+        "Responsável", "Localização", "Fornecedor", "Data compra",
+        "Fim garantia", "Valor (R$)", "Nota fiscal",
+    ]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    from app.utils.template_helpers import STATUS_LABELS, CONDITION_LABELS
+    for a in assets:
+        ws.append([
+            a.asset_tag,
+            a.serial_number or "",
+            a.asset_type.name if a.asset_type else "",
+            a.brand or "",
+            a.model or "",
+            STATUS_LABELS.get(a.status.value, a.status.value),
+            CONDITION_LABELS.get(a.condition.value, a.condition.value),
+            a.assigned_to.name if a.assigned_to else "",
+            a.location.name if a.location else "",
+            a.supplier.name if a.supplier else "",
+            a.purchase_date.strftime("%d/%m/%Y") if a.purchase_date else "",
+            a.warranty_expiry_date.strftime("%d/%m/%Y") if a.warranty_expiry_date else "",
+            float(a.purchase_price) if a.purchase_price is not None else "",
+            a.invoice_number or "",
+        ])
+
+    # Largura automática simples.
+    for i, _h in enumerate(headers, start=1):
+        ws.column_dimensions[chr(64 + i)].width = 18
+
+    import io
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    from flask import send_file
+    stamp = datetime.now().strftime("%Y%m%d_%H%M")
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=f"ativos_{stamp}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@assets_bp.route("/<int:asset_id>/qrcode.png")
+@login_required
+def qrcode_png(asset_id):
+    """PNG do QR Code que aponta para a ficha do ativo."""
+    asset = db.session.get(Asset, asset_id)
+    if asset is None:
+        abort(404)
+    try:
+        import io
+
+        import qrcode
+        import qrcode.image.svg
+        target = url_for("assets.view_asset", asset_id=asset.id, _external=True)
+        img = qrcode.make(target, image_factory=qrcode.image.svg.SvgImage)
+        buf = io.BytesIO()
+        img.save(buf)
+        buf.seek(0)
+    except Exception:  # noqa: BLE001 — ImportError se 'qrcode' faltar
+        current_app.logger.exception(
+            "Falha ao gerar QR Code (verifique 'qrcode' e REINICIE o servidor)"
+        )
+        abort(503)
+    from flask import send_file
+    return send_file(buf, mimetype="image/svg+xml")
+
+
+@assets_bp.route("/<int:asset_id>/label")
+@login_required
+def label(asset_id):
+    """Página de etiqueta imprimível com QR Code."""
+    asset = db.session.get(Asset, asset_id)
+    if asset is None:
+        abort(404)
+    return render_template("assets/label.html", asset=asset)
+
+
+@assets_bp.route("/<int:asset_id>/termo")
+@login_required
+def termo(asset_id):
+    """Gera o termo de responsabilidade (PDF) do ativo atribuído."""
+    asset = db.session.get(Asset, asset_id)
+    if asset is None:
+        abort(404)
+    if asset.assigned_to is None:
+        flash("Este ativo não tem responsável — atribua antes de gerar o termo.", "warning")
+        return redirect(url_for("assets.view_asset", asset_id=asset.id))
+
+    try:
+        pdf_buf = _build_termo_pdf(asset)
+    except ImportError:
+        current_app.logger.warning(
+            "Geração de PDF indisponível: 'reportlab' não encontrado. "
+            "Instale as dependências e REINICIE o servidor."
+        )
+        flash("Não foi possível gerar o PDF agora. Contate o administrador do sistema.", "warning")
+        return redirect(url_for("assets.view_asset", asset_id=asset.id))
+    except Exception:  # noqa: BLE001 — qualquer outra falha vira aviso amigável
+        current_app.logger.exception("Falha inesperada ao gerar o termo em PDF")
+        flash("Não foi possível gerar o PDF agora. Contate o administrador do sistema.", "warning")
+        return redirect(url_for("assets.view_asset", asset_id=asset.id))
+
+    from flask import send_file
+    return send_file(
+        pdf_buf,
+        as_attachment=False,
+        download_name=f"termo_{asset.asset_tag}.pdf",
+        mimetype="application/pdf",
+    )
+
+
+def _lat1(text):
+    """Sanitiza texto para as fontes core do PDF (latin-1), evitando erro
+    com caracteres fora do conjunto (ex.: emojis, travessão)."""
+    return (text or "").encode("latin-1", "replace").decode("latin-1")
+
+
+def _build_termo_pdf(asset):
+    """Monta o PDF do termo de responsabilidade (fpdf2) e retorna um BytesIO."""
+    import io
+
+    from fpdf import FPDF
+    from fpdf.enums import XPos, YPos
+
+    from app.utils.settings import get_setting
+
+    company = get_setting("company_name", "Inventário de TI")
+    emp = asset.assigned_to
+    spec_bits = []
+    if asset.brand:
+        spec_bits.append(asset.brand)
+    if asset.model:
+        spec_bits.append(asset.model)
+    descr = " ".join(spec_bits) or (asset.asset_type.name if asset.asset_type else "Equipamento")
+
+    pdf = FPDF(format="A4")
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_margins(25, 20, 25)
+    pdf.add_page()
+
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, _lat1("TERMO DE RESPONSABILIDADE"), align="C",
+             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", size=10)
+    pdf.cell(0, 7, _lat1(company), align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.ln(6)
+
+    pdf.set_font("Helvetica", size=11)
+    texto = (
+        f"Eu, {emp.name}"
+        + (f" (matrícula {emp.employee_id})" if getattr(emp, "employee_id", None) else "")
+        + (f", do departamento {emp.department.name}" if getattr(emp, "department", None) else "")
+        + ", declaro ter recebido o equipamento abaixo descrito, comprometendo-me a "
+        "zelar por sua guarda e conservação, utilizá-lo exclusivamente para fins de "
+        "trabalho e devolvê-lo quando solicitado ou ao término do vínculo."
+    )
+    pdf.multi_cell(0, 6, _lat1(texto))
+    pdf.ln(4)
+
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 7, "Dados do equipamento", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", size=11)
+    linhas = [
+        f"Patrimônio: {asset.asset_tag}",
+        f"Descrição: {descr}",
+        f"Número de série: {asset.serial_number or '-'}",
+        f"Tipo: {asset.asset_type.name if asset.asset_type else '-'}",
+        f"Localização: {asset.location.name if asset.location else '-'}",
+    ]
+    for ln in linhas:
+        pdf.cell(0, 6, _lat1(ln), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    pdf.ln(6)
+    pdf.cell(0, 6, _lat1(f"Data: {datetime.now().strftime('%d/%m/%Y')}"),
+             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    pdf.ln(20)
+    y = pdf.get_y()
+    left = pdf.l_margin
+    pdf.line(left, y, left + 75, y)
+    pdf.line(left + 90, y, left + 160, y)
+    pdf.set_y(y + 2)
+    pdf.set_font("Helvetica", size=9)
+    pdf.cell(90, 5, _lat1(emp.name))
+    pdf.cell(0, 5, _lat1("Responsável pela entrega (TI)"),
+             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    return io.BytesIO(bytes(pdf.output()))
 
 
 @assets_bp.route("/<int:asset_id>")

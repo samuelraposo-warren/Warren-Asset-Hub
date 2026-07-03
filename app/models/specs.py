@@ -5,10 +5,8 @@ a spec correspondente ao tipo do ativo é preenchida.
 """
 from app.extensions import db
 from app.models.enums import (
-    ConnectionType,
     FormFactor,
     NetworkDeviceType,
-    PanelType,
     PrinterType,
     StorageType,
 )
@@ -58,26 +56,6 @@ class DesktopSpec(db.Model):
 
     def __repr__(self):
         return f"<DesktopSpec asset={self.asset_id}>"
-
-
-@audit_model
-class MonitorSpec(db.Model):
-    __tablename__ = "monitor_specs"
-
-    id = db.Column(db.Integer, primary_key=True)
-    asset_id = db.Column(
-        db.Integer, db.ForeignKey("assets.id"), unique=True, nullable=False
-    )
-    asset = db.relationship("Asset", back_populates="monitor_spec")
-
-    screen_size = db.Column(db.String(20), nullable=True)
-    resolution = db.Column(db.String(40), nullable=True)
-    panel_type = db.Column(db.Enum(PanelType), nullable=True)
-    refresh_rate_hz = db.Column(db.Integer, nullable=True)
-    ports = db.Column(db.String(120), nullable=True)  # ex.: "HDMI, DisplayPort"
-
-    def __repr__(self):
-        return f"<MonitorSpec asset={self.asset_id}>"
 
 
 @audit_model
@@ -142,18 +120,3 @@ class NetworkSpec(db.Model):
         return f"<NetworkSpec asset={self.asset_id}>"
 
 
-@audit_model
-class PeripheralSpec(db.Model):
-    __tablename__ = "peripheral_specs"
-
-    id = db.Column(db.Integer, primary_key=True)
-    asset_id = db.Column(
-        db.Integer, db.ForeignKey("assets.id"), unique=True, nullable=False
-    )
-    asset = db.relationship("Asset", back_populates="peripheral_spec")
-
-    peripheral_type = db.Column(db.String(80), nullable=True)  # Teclado, Mouse...
-    connection_type = db.Column(db.Enum(ConnectionType), nullable=True)
-
-    def __repr__(self):
-        return f"<PeripheralSpec asset={self.asset_id}>"

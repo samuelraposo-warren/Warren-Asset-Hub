@@ -10,16 +10,15 @@ A ordem respeita as dependências de ForeignKey.
 """
 from app.models.user import User
 from app.models.audit import AuditLog
+from app.models.setting import Setting
 from app.models.employee import Department, Employee
 from app.models.location import Branch, Location
 from app.models.supplier import Supplier
 from app.models.asset import Asset, AssetType
 from app.models.specs import (
     DesktopSpec,
-    MonitorSpec,
     NetworkSpec,
     NotebookSpec,
-    PeripheralSpec,
     PrinterSpec,
     ServerSpec,
 )
@@ -29,6 +28,7 @@ from app.models.maintenance import MaintenanceRecord
 __all__ = [
     "User",
     "AuditLog",
+    "Setting",
     "Department",
     "Employee",
     "Branch",
@@ -38,11 +38,9 @@ __all__ = [
     "AssetType",
     "NotebookSpec",
     "DesktopSpec",
-    "MonitorSpec",
     "PrinterSpec",
     "ServerSpec",
     "NetworkSpec",
-    "PeripheralSpec",
     "AssetMovement",
     "MaintenanceRecord",
 ]

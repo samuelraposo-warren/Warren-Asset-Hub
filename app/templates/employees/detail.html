@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ emp.name }} — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-person-badge"></i> {{ emp.name }}</h1>
+    <p class="text-muted mb-0">
+      Matrícula {{ emp.employee_id }}
+      {% if emp.department %} · {{ emp.department.name }}{% endif %}
+      {% if not emp.is_active %} · <span class="badge badge-inactive">Inativo</span>{% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-1">
+    <a href="{{ url_for('registry.list_entity', entity='employees') }}" class="btn btn-ghost">
+      <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+    {% if can_edit %}
+    <a href="{{ url_for('registry.edit_entity', entity='employees', item_id=emp.id) }}" class="btn btn-ghost">
+      <i class="bi bi-pencil"></i> Editar
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-title">Dados</div>
+  <dl class="dl-inline form-grid">
+    <div><dt>Matrícula</dt><dd>{{ emp.employee_id }}</dd></div>
+    <div><dt>E-mail</dt><dd>{{ emp.email or '—' }}</dd></div>
+    <div><dt>Departamento</dt><dd>{{ emp.department.name if emp.department else '—' }}</dd></div>
+    <div><dt>Situação</dt><dd>
+      {% if emp.is_active %}<span class="badge badge-active">Ativo</span>
+      {% else %}<span class="badge badge-inactive">Inativo</span>{% endif %}
+    </dd></div>
+  </dl>
+</div>
+
+<div class="card mb-2">
+  <div class="card-title"><i class="bi bi-hdd-stack"></i> Máquinas sob responsabilidade ({{ current_assets|length }})</div>
+  {% if current_assets %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Patrimônio</th><th>Tipo</th><th>Marca / Modelo</th><th>Status</th><th>Local</th></tr></thead>
+      <tbody>
+        {% for a in current_assets %}
+        <tr>
+          <td><a href="{{ url_for('assets.view_asset', asset_id=a.id) }}">{{ a.asset_tag }}</a></td>
+          <td>{{ a.asset_type.name if a.asset_type else '—' }}</td>
+          <td>{{ a.brand or '' }} {{ a.model or '' }}{% if not a.brand and not a.model %}—{% endif %}</td>
+          <td><span class="badge {{ a.status.value | status_badge }}">{{ a.status.value | status_label }}</span></td>
+          <td>{{ a.location.name if a.location else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Nenhuma máquina sob responsabilidade no momento.</p>
+  {% endif %}
+</div>
+
+<div class="card mb-2">
+  <div class="card-title"><i class="bi bi-arrow-left-right"></i> Histórico de movimentações</div>
+  {% if movements %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Evento</th>
+          <th>Máquina</th>
+          <th>Outra parte</th>
+          <th>Motivo</th>
+          <th>Registrado por</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mv in movements %}
+        {% set received = (mv.to_employee_id == emp.id) %}
+        <tr>
+          <td>{{ mv.moved_at | date_br }}</td>
+          <td>
+            {% if received %}
+              <span class="badge badge-active">Recebeu</span>
+            {% else %}
+              <span class="badge badge-loaned">Entregou</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if mv.asset %}
+              <a href="{{ url_for('assets.view_asset', asset_id=mv.asset_id) }}">{{ mv.asset.asset_tag }}</a>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if received %}
+              {{ mv.from_employee.name if mv.from_employee else '— (sem responsável anterior)' }}
+            {% else %}
+              {{ mv.to_employee.name if mv.to_employee else '— (sem novo responsável)' }}
+            {% endif %}
+          </td>
+          <td>{{ mv.reason or '—' }}</td>
+          <td>{{ mv.moved_by.name if mv.moved_by else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Nenhuma movimentação registrada para esta pessoa.</p>
+  {% endif %}
+</div>
+{% endblock %}

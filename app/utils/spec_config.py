@@ -9,19 +9,15 @@ Cada campo: {key, label, type, enum?}
   enum: classe Enum (obrigatório quando type == "select")
 """
 from app.models.enums import (
-    ConnectionType,
     FormFactor,
     NetworkDeviceType,
-    PanelType,
     PrinterType,
     StorageType,
 )
 from app.models.specs import (
     DesktopSpec,
-    MonitorSpec,
     NetworkSpec,
     NotebookSpec,
-    PeripheralSpec,
     PrinterSpec,
     ServerSpec,
 )
@@ -61,18 +57,6 @@ SPEC_CONFIG = {
             _f("form_factor", "Formato", "select", FormFactor),
         ],
     },
-    "monitor": {
-        "model": MonitorSpec,
-        "rel": "monitor_spec",
-        "label": "Especificações do monitor",
-        "fields": [
-            _f("screen_size", "Tamanho da tela", "text"),
-            _f("resolution", "Resolução", "text"),
-            _f("panel_type", "Tipo de painel", "select", PanelType),
-            _f("refresh_rate_hz", "Taxa de atualização (Hz)", "number"),
-            _f("ports", "Portas", "text"),
-        ],
-    },
     "printer": {
         "model": PrinterSpec,
         "rel": "printer_spec",
@@ -109,15 +93,6 @@ SPEC_CONFIG = {
             _f("ports_count", "Número de portas", "number"),
             _f("ip_address", "Endereço IP", "text"),
             _f("managed", "Gerenciável", "checkbox"),
-        ],
-    },
-    "peripheral": {
-        "model": PeripheralSpec,
-        "rel": "peripheral_spec",
-        "label": "Especificações do periférico",
-        "fields": [
-            _f("peripheral_type", "Tipo (Teclado, Mouse...)", "text"),
-            _f("connection_type", "Tipo de conexão", "select", ConnectionType),
         ],
     },
 }

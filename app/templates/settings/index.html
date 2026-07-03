@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Inventário de TI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-gear"></i> Configurações</h1>
+    <p class="text-muted mb-0">Sua conta, preferências{% if is_admin %} e parâmetros do sistema{% endif %}</p>
+  </div>
+</div>
+
+<div class="form-grid" style="align-items:start">
+
+  <!-- Minha conta -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-person"></i> Minha conta</div>
+    <form method="post" action="{{ url_for('settings.update_account') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label" for="acc_name">Nome</label>
+        <input type="text" id="acc_name" name="name" class="form-control" value="{{ current_user.name }}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input type="text" class="form-control" value="{{ current_user.email }}" readonly>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Papel</label>
+        <input type="text" class="form-control" value="{{ current_user.role.value }}" readonly>
+      </div>
+      <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check-lg"></i> Salvar</button>
+    </form>
+  </div>
+
+  <!-- Trocar senha -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-key"></i> Trocar minha senha</div>
+    <form method="post" action="{{ url_for('settings.change_password') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label" for="cur_pw">Senha atual</label>
+        <input type="password" id="cur_pw" name="current_password" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="new_pw">Nova senha</label>
+        <input type="password" id="new_pw" name="new_password" class="form-control" placeholder="mín. 6 caracteres" required>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label" for="conf_pw">Confirmar nova senha</label>
+        <input type="password" id="conf_pw" name="confirm_password" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check-lg"></i> Alterar senha</button>
+    </form>
+  </div>
+
+  <!-- Aparência -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-sliders"></i> Aparência</div>
+    <form method="post" action="{{ url_for('settings.update_appearance') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label" for="rows">Itens por página (listas paginadas)</label>
+        <select id="rows" name="rows_per_page" class="form-select">
+          {% for n in rows_options %}
+          <option value="{{ n }}" {{ 'selected' if appearance.rows_per_page == n }}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label" for="density">Densidade das tabelas</label>
+        <select id="density" name="density" class="form-select">
+          <option value="comfortable" {{ 'selected' if appearance.density == 'comfortable' }}>Confortável</option>
+          <option value="compact" {{ 'selected' if appearance.density == 'compact' }}>Compacta</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check-lg"></i> Salvar preferências</button>
+    </form>
+  </div>
+
+  {% if is_admin %}
+  <!-- Parâmetros do sistema (ADMIN) -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-building-gear"></i> Parâmetros do sistema</div>
+    <form method="post" action="{{ url_for('settings.update_system') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label" for="company">Nome da empresa / sistema</label>
+        <input type="text" id="company" name="company_name" class="form-control" value="{{ sys.company_name }}">
+        <small class="text-muted">Aparece no menu lateral e no título das páginas.</small>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="warranty">Aviso de garantia (dias)</label>
+        <input type="number" id="warranty" name="warranty_window_days" class="form-control" min="1" value="{{ sys.warranty_window_days }}">
+        <small class="text-muted">Janela usada no painel para "garantias vencendo".</small>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label" for="currency">Símbolo de moeda</label>
+        <input type="text" id="currency" name="currency_symbol" class="form-control" value="{{ sys.currency_symbol }}" style="max-width:120px">
+      </div>
+      <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check-lg"></i> Salvar parâmetros</button>
+    </form>
+  </div>
+
+  <!-- Atalhos de administração (ADMIN) -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-shield-lock"></i> Administração</div>
+    <p class="text-muted" style="font-size:0.85rem">Acesso rápido às áreas administrativas.</p>
+    <div class="d-flex gap-1" style="flex-wrap:wrap">
+      <a href="{{ url_for('users.list_users') }}" class="btn btn-ghost"><i class="bi bi-people"></i> Gerenciar usuários</a>
+      <a href="{{ url_for('audit.list_logs') }}" class="btn btn-ghost"><i class="bi bi-shield-check"></i> Ver auditoria</a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

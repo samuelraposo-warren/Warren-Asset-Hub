@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Inventário de TI{% endblock %}</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}{{ SETTINGS.company_name }}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -11,11 +12,11 @@
   <link href="{{ url_for('static', filename='css/theme.css') }}" rel="stylesheet">
   {% block head %}{% endblock %}
 </head>
-<body class="app-shell">
+<body class="app-shell density-{{ (current_user.get_pref('appearance', {}) or {}).get('density', 'comfortable') if current_user.is_authenticated else 'comfortable' }}">
   <div class="layout">
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <i class="bi bi-hdd-stack"></i> Inventário
+        <i class="bi bi-hdd-stack"></i> {{ SETTINGS.company_name }}
       </div>
       <nav class="sidebar-nav">
         {% set nav = request.endpoint or '' %}
@@ -36,6 +37,10 @@
            href="{{ url_for('audit.list_logs') }}">
           <i class="bi bi-shield-check"></i> Auditoria
         </a>
+        <a class="nav-link-item {{ 'active' if nav.startswith('users.') }}"
+           href="{{ url_for('users.list_users') }}">
+          <i class="bi bi-people"></i> Usuários
+        </a>
         {% endif %}
 
         <div class="form-section-title" style="margin:1.25rem 0 0.5rem 0.85rem">Cadastros</div>
@@ -55,6 +60,10 @@
             <div class="text-muted" style="font-size:0.75rem">{{ current_user.role.value }}</div>
           </div>
         </div>
+        <a class="nav-link-item {{ 'active' if nav.startswith('settings.') }}"
+           href="{{ url_for('settings.index') }}">
+          <i class="bi bi-gear"></i> Configurações
+        </a>
         <a class="nav-link-item" href="{{ url_for('auth.logout') }}">
           <i class="bi bi-box-arrow-right"></i> Sair
         </a>
@@ -62,6 +71,31 @@
     </aside>
 
     <main class="content">
+      <div class="topbar">
+        <div class="notif" id="notifRoot">
+          <button type="button" class="notif-btn" id="notifBtn" aria-label="Notificações" aria-expanded="false">
+            <i class="bi bi-bell"></i>
+            {% if NOTIFICATIONS.count %}<span class="notif-badge">{{ NOTIFICATIONS.count }}</span>{% endif %}
+          </button>
+          <div class="notif-panel" id="notifPanel" role="menu">
+            <div class="notif-head">
+              <i class="bi bi-bell"></i> Notificações
+            </div>
+            {% if NOTIFICATIONS.alerts %}
+              {% for n in NOTIFICATIONS.alerts %}
+              <a class="notif-item" href="{{ n.url }}">
+                <i class="bi {{ n.icon }} notif-ic notif-{{ n.level }}"></i>
+                <span class="notif-text">{{ n.text }}</span>
+                <span class="badge {{ n.badge }}">{{ n.count }}</span>
+              </a>
+              {% endfor %}
+            {% else %}
+              <div class="notif-empty"><i class="bi bi-check2-circle"></i> Nenhum aviso no momento.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for category, message in messages %}
           <div class="alert alert-{{ category }}" role="alert">
@@ -74,6 +108,7 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

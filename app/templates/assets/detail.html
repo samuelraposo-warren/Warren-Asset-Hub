@@ -10,8 +10,16 @@
       · <span class="badge {{ asset.status.value | status_badge }}">{{ asset.status.value | status_label }}</span>
     </p>
   </div>
-  <div class="d-flex gap-1">
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
     <a href="{{ url_for('assets.list_assets') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <a href="{{ url_for('assets.label', asset_id=asset.id) }}" class="btn btn-ghost" target="_blank">
+      <i class="bi bi-qr-code"></i> Etiqueta
+    </a>
+    {% if asset.assigned_to %}
+    <a href="{{ url_for('assets.termo', asset_id=asset.id) }}" class="btn btn-ghost" target="_blank">
+      <i class="bi bi-file-earmark-text"></i> Termo (PDF)
+    </a>
+    {% endif %}
     {% if can_edit %}
     <a href="{{ url_for('assets.assign_asset', asset_id=asset.id) }}" class="btn btn-ghost">
       <i class="bi bi-arrow-left-right"></i> Atribuir
@@ -28,6 +36,18 @@
   </div>
 </div>
 
+{% if asset.image_url %}
+<div class="card mb-2">
+  <div class="card-title"><i class="bi bi-camera"></i> Foto do equipamento</div>
+  <a href="{{ asset.image_url }}" target="_blank" title="Abrir imagem no Drive">
+    <img src="{{ asset.image_url | drive_img }}" alt="Foto de {{ asset.asset_tag }}"
+         style="max-width:100%;max-height:360px;border-radius:12px;border:1px solid var(--color-border)"
+         loading="lazy"
+         onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<p class=\'text-muted mb-0\'>Não foi possível carregar a imagem. <a href=&quot;{{ asset.image_url }}&quot; target=_blank>Abrir no Drive</a> (confirme se está compartilhada como “qualquer pessoa com o link”).</p>');">
+  </a>
+</div>
+{% endif %}
+
 <div class="card mb-2">
   <div class="card-title">Dados gerais</div>
   <dl class="dl-inline form-grid">
@@ -37,7 +57,11 @@
     <div><dt>Condição</dt><dd>
       <span class="badge {{ asset.condition.value | condition_badge }}">{{ asset.condition.value | condition_label }}</span>
     </dd></div>
-    <div><dt>Responsável</dt><dd>{{ asset.assigned_to.name if asset.assigned_to else '—' }}</dd></div>
+    <div><dt>Responsável</dt><dd>
+      {% if asset.assigned_to %}
+        <a href="{{ url_for('employees.view_employee', employee_id=asset.assigned_to.id) }}">{{ asset.assigned_to.name }}</a>
+      {% else %}—{% endif %}
+    </dd></div>
     <div><dt>Localização</dt><dd>{{ asset.location.name if asset.location else '—' }}</dd></div>
   </dl>
 </div>

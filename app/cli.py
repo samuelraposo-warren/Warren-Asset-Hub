@@ -19,11 +19,9 @@ from app.models.user import User
 _DEFAULT_TYPES = [
     ("Notebook", "notebook"),
     ("Desktop", "desktop"),
-    ("Monitor", "monitor"),
     ("Impressora", "printer"),
     ("Servidor", "server"),
     ("Rede", "network"),
-    ("Periférico", "peripheral"),
 ]
 
 

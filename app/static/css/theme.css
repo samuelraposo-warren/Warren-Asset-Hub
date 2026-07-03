@@ -377,3 +377,113 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
   .content { padding: 1.25rem; }
 }
+
+/* ---------- Dashboard editável (widgets) ---------- */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.dash-widget.span-2 { grid-column: 1 / -1; }
+
+/* Oculto no modo normal; visível e esmaecido no modo de edição */
+.dash-widget.is-hidden { display: none; }
+.dash-grid.editing .dash-widget.is-hidden { display: block; opacity: 0.45; }
+
+.dash-grid.editing .dash-widget {
+  outline: 1px dashed var(--color-border-strong);
+  outline-offset: 5px;
+  border-radius: 14px;
+}
+
+.widget-bar { display: none; }
+.dash-grid.editing .widget-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--color-surface-2);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-btn);
+}
+.drag-handle { cursor: grab; color: var(--color-text-muted); font-size: 1.1rem; }
+.drag-handle:active { cursor: grabbing; }
+.widget-name { flex-grow: 1; font-size: 0.8rem; color: var(--color-text-muted); }
+.widget-toggle {
+  background: none; border: none; cursor: pointer;
+  color: var(--color-text-muted); font-size: 1.05rem; line-height: 1;
+}
+.widget-toggle:hover { color: var(--color-text); }
+.widget-ghost { opacity: 0.4; }
+
+.chart-box { position: relative; height: 260px; }
+
+@media (max-width: 900px) {
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-widget.span-2 { grid-column: auto; }
+}
+
+/* ---------- Densidade das tabelas (preferência de aparência) ---------- */
+body.density-compact .table tbody td { padding: 0.45rem 0.7rem; font-size: 0.85rem; }
+body.density-compact .table thead th { padding: 0.5rem 0.7rem; }
+body.density-compact .stat-card .stat-value { font-size: 1.9rem; }
+
+/* ---------- Barra superior + notificações ---------- */
+.topbar { display: flex; justify-content: flex-end; margin-bottom: 1rem; }
+.notif { position: relative; }
+.notif-btn {
+  position: relative;
+  width: 42px; height: 42px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 1.15rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+.notif-btn:hover { border-color: var(--color-border-strong); }
+.notif-badge {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-primary); color: #fff;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  border-radius: 9px; border: 2px solid var(--color-bg);
+}
+.notif-panel {
+  position: absolute; right: 0; top: calc(100% + 8px);
+  width: 330px; max-width: 88vw;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+  padding: 0.5rem;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  display: none; z-index: 50;
+}
+.notif.open .notif-panel { display: block; }
+.notif-head {
+  font-size: 0.8rem; color: var(--color-text-muted);
+  padding: 0.4rem 0.6rem 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.notif-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.6rem; border-radius: var(--radius-btn);
+  color: var(--color-text);
+}
+.notif-item:hover { background: rgba(255, 255, 255, 0.05); color: var(--color-text); }
+.notif-text { flex-grow: 1; font-size: 0.85rem; line-height: 1.35; }
+.notif-ic { font-size: 1.15rem; }
+.notif-danger { color: var(--color-primary-light); }
+.notif-warning { color: #F5B041; }
+.notif-info { color: #5DADE2; }
+.notif-empty {
+  padding: 1.25rem 0.6rem; text-align: center;
+  color: var(--color-text-muted); font-size: 0.85rem;
+}
+.notif-empty .bi { color: #58D68D; margin-right: 0.3rem; }

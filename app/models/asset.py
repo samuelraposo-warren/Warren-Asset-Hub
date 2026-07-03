@@ -56,6 +56,10 @@ class Asset(db.Model):
     supplier = db.relationship("Supplier", back_populates="assets")
     invoice_number = db.Column(db.String(80), nullable=True)  # nota fiscal
 
+    # Link (ex.: Google Drive) para a foto do equipamento. Não armazenamos a
+    # imagem no servidor — apenas referenciamos o arquivo já existente.
+    image_url = db.Column(db.String(1000), nullable=True)
+
     location_id = db.Column(
         db.Integer, db.ForeignKey("locations.id"), nullable=True
     )
@@ -92,10 +96,6 @@ class Asset(db.Model):
         "DesktopSpec", back_populates="asset", uselist=False,
         cascade="all, delete-orphan",
     )
-    monitor_spec = db.relationship(
-        "MonitorSpec", back_populates="asset", uselist=False,
-        cascade="all, delete-orphan",
-    )
     printer_spec = db.relationship(
         "PrinterSpec", back_populates="asset", uselist=False,
         cascade="all, delete-orphan",
@@ -106,10 +106,6 @@ class Asset(db.Model):
     )
     network_spec = db.relationship(
         "NetworkSpec", back_populates="asset", uselist=False,
-        cascade="all, delete-orphan",
-    )
-    peripheral_spec = db.relationship(
-        "PeripheralSpec", back_populates="asset", uselist=False,
         cascade="all, delete-orphan",
     )
 

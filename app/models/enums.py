@@ -41,13 +41,6 @@ class FormFactor(enum.Enum):
     ALL_IN_ONE = "ALL_IN_ONE"
 
 
-class PanelType(enum.Enum):
-    IPS = "IPS"
-    TN = "TN"
-    VA = "VA"
-    OLED = "OLED"
-
-
 class PrinterType(enum.Enum):
     LASER = "LASER"
     INKJET = "INKJET"
@@ -59,12 +52,6 @@ class NetworkDeviceType(enum.Enum):
     ROUTER = "ROUTER"
     ACCESS_POINT = "ACCESS_POINT"
     FIREWALL = "FIREWALL"
-
-
-class ConnectionType(enum.Enum):
-    USB = "USB"
-    BLUETOOTH = "BLUETOOTH"
-    WIRELESS = "WIRELESS"
 
 
 class MaintenanceType(enum.Enum):

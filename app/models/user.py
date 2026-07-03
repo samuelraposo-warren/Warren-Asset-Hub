@@ -27,6 +27,13 @@ class User(UserMixin, db.Model):
     # IP do último acesso (suporta IPv6, por isso 45 caracteres).
     ip_address = db.Column(db.String(45), nullable=True)
 
+    # Preferências pessoais em JSON: layout do dashboard, aparência, etc.
+    # (não é auditado — ver observação abaixo).
+    preferences = db.Column(db.JSON, nullable=True)
+
+    # Força a troca de senha no próximo login (senha temporária / redefinida).
+    must_change_password = db.Column(db.Boolean, nullable=False, default=False)
+
     # --- Senha -------------------------------------------------------
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -41,6 +48,18 @@ class User(UserMixin, db.Model):
 
     def has_role(self, *roles):
         return self.role in roles
+
+    # --- Preferências (JSON) ----------------------------------------
+    def get_pref(self, key, default=None):
+        prefs = self.preferences or {}
+        return prefs.get(key, default)
+
+    def set_pref(self, key, value):
+        # Reatribui o dict inteiro para o SQLAlchemy detectar a mudança
+        # (colunas JSON não rastreiam mutação in-place por padrão).
+        prefs = dict(self.preferences or {})
+        prefs[key] = value
+        self.preferences = prefs
 
     def __repr__(self):
         return f"<User {self.email} ({self.role.value})>"

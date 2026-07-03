@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Etiqueta {{ asset.asset_tag }}</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; background: #f2f2f2; margin: 0; padding: 2rem; }
+    .toolbar { max-width: 420px; margin: 0 auto 1rem; display: flex; gap: 0.5rem; justify-content: center; }
+    .btn { font: inherit; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #888; background: #fff; cursor: pointer; text-decoration: none; color: #222; }
+    .btn-primary { background: #C0392B; color: #fff; border-color: #C0392B; }
+    .label {
+      width: 420px; margin: 0 auto; background: #fff; color: #111;
+      border: 2px solid #111; border-radius: 10px; padding: 18px 20px;
+      display: flex; align-items: center; gap: 18px;
+    }
+    .label img { width: 130px; height: 130px; }
+    .label .info { flex-grow: 1; }
+    .label .tag { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+    .label .descr { font-size: 15px; margin-top: 4px; }
+    .label .muted { font-size: 12px; color: #555; margin-top: 8px; }
+    .label .company { font-size: 12px; color: #C0392B; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .toolbar { display: none; }
+      .label { border-color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="window.print()">Imprimir</button>
+    <a class="btn" href="{{ url_for('assets.view_asset', asset_id=asset.id) }}">Voltar</a>
+  </div>
+
+  <div class="label">
+    <img src="{{ url_for('assets.qrcode_png', asset_id=asset.id) }}" alt="QR {{ asset.asset_tag }}">
+    <div class="info">
+      <div class="company">{{ SETTINGS.company_name }}</div>
+      <div class="tag">{{ asset.asset_tag }}</div>
+      <div class="descr">
+        {{ asset.brand or '' }} {{ asset.model or '' }}
+        {%- if not asset.brand and not asset.model %}{{ asset.asset_type.name if asset.asset_type else 'Equipamento' }}{% endif %}
+      </div>
+      <div class="muted">
+        {{ asset.asset_type.name if asset.asset_type else '' }}
+        {% if asset.serial_number %}· S/N {{ asset.serial_number }}{% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

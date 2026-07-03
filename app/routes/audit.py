@@ -29,8 +29,15 @@ def list_logs():
         except KeyError:
             pass
 
+    # Itens por página vem da preferência de aparência do usuário.
+    try:
+        from flask_login import current_user
+        per_page = int((current_user.get_pref("appearance", {}) or {}).get("rows_per_page", 30))
+    except Exception:  # noqa: BLE001
+        per_page = 30
+
     query = query.order_by(AuditLog.changed_at.desc(), AuditLog.id.desc())
-    pagination = query.paginate(page=page, per_page=30, error_out=False)
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
     tables = [
         row[0]
