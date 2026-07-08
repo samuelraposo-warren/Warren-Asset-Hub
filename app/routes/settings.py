@@ -19,7 +19,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models.enums import UserRole
-from app.utils.settings import current_settings, set_setting
+from app.utils.settings import current_settings, mail_settings, set_setting
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 
@@ -123,3 +123,106 @@ def update_system():
     set_setting("warranty_window_days", window)
     flash("Parâmetros do sistema atualizados.", "success")
     return redirect(url_for("settings.index"))
+
+
+# ---------------------------------------------------------------------------
+# E-mail (SMTP) — só ADMIN. Guardado na tabela settings; .env é fallback.
+# ---------------------------------------------------------------------------
+def _admin_only():
+    if not current_user.is_admin:
+        flash("Apenas administradores podem acessar esta área.", "danger")
+        return False
+    return True
+
+
+@settings_bp.route("/email")
+@login_required
+def email():
+    if not _admin_only():
+        return redirect(url_for("settings.index"))
+    cfg = mail_settings()
+    return render_template(
+        "settings/email.html",
+        mail=cfg,
+        has_password=bool(cfg["password"]),
+    )
+
+
+@settings_bp.route("/email", methods=["POST"])
+@login_required
+def update_email():
+    if not _admin_only():
+        return redirect(url_for("settings.index"))
+
+    set_setting("mail_server", (request.form.get("mail_server") or "").strip())
+    try:
+        port = int(request.form.get("mail_port") or 587)
+    except ValueError:
+        port = 587
+    set_setting("mail_port", port)
+    set_setting("mail_use_tls", "true" if request.form.get("mail_use_tls") else "false")
+    set_setting("mail_use_ssl", "true" if request.form.get("mail_use_ssl") else "false")
+    set_setting("mail_username", (request.form.get("mail_username") or "").strip())
+    set_setting("mail_from", (request.form.get("mail_from") or "").strip())
+    set_setting("mail_from_name", (request.form.get("mail_from_name") or "").strip()
+                or "Centralizador de TI")
+    set_setting("mail_alert_extra", (request.form.get("mail_alert_extra") or "").strip())
+
+    # Senha: só altera se o admin digitou algo, ou se pediu para limpar.
+    new_pw = request.form.get("mail_password") or ""
+    if request.form.get("clear_password"):
+        set_setting("mail_password", "")
+    elif new_pw.strip():
+        set_setting("mail_password", new_pw.strip())
+
+    # Um botão "Salvar" e outro "Salvar e enviar teste" (mesmo formulário).
+    if request.form.get("action") == "test":
+        from app.utils.mailer import send_email
+
+        to = (request.form.get("test_to") or current_user.email or "").strip()
+        if not to:
+            flash("Configuração salva, mas informe um e-mail para o teste.", "warning")
+            return redirect(url_for("settings.email"))
+        html = (
+            "<div style='font-family:Inter,Arial,sans-serif'>"
+            "<h2>✅ Teste de e-mail</h2>"
+            "<p>Se você recebeu esta mensagem, a configuração de SMTP do "
+            "Warren IT Hub está funcionando.</p></div>"
+        )
+        ok, err = send_email("[Teste] Configuração de e-mail", [to], html,
+                             "Teste de e-mail: configuração SMTP funcionando.")
+        if ok:
+            flash(f"Configuração salva e e-mail de teste enviado para {to}.", "success")
+        else:
+            flash(f"Configuração salva, mas o teste falhou: {err}", "danger")
+        return redirect(url_for("settings.email"))
+
+    flash("Configuração de e-mail salva.", "success")
+    return redirect(url_for("settings.email"))
+
+
+@settings_bp.route("/email/test", methods=["POST"])
+@login_required
+def email_test():
+    if not _admin_only():
+        return redirect(url_for("settings.index"))
+    from app.utils.mailer import send_email
+
+    to = (request.form.get("test_to") or current_user.email or "").strip()
+    if not to:
+        flash("Informe um e-mail de destino para o teste.", "danger")
+        return redirect(url_for("settings.email"))
+
+    html = (
+        "<div style='font-family:Inter,Arial,sans-serif'>"
+        "<h2>✅ Teste de e-mail</h2>"
+        "<p>Se você recebeu esta mensagem, a configuração de SMTP do "
+        "Centralizador de TI está funcionando.</p></div>"
+    )
+    ok, err = send_email("[Teste] Configuração de e-mail", [to], html,
+                         "Teste de e-mail: configuração SMTP funcionando.")
+    if ok:
+        flash(f"E-mail de teste enviado para {to}.", "success")
+    else:
+        flash(f"Falha ao enviar: {err}", "danger")
+    return redirect(url_for("settings.email"))

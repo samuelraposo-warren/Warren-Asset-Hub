@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ cert.common_name or 'Certificado' }} — Certificados{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-file-earmark-lock"></i> {{ cert.common_name or 'Certificado' }}</h1>
+    <p class="text-muted mb-0">
+      <span class="badge {{ cert.status_key | cert_status_badge }}">{{ cert.status_key | cert_status_label }}</span>
+      {% if cert.days_to_expiry is not none %}
+        {% if cert.days_to_expiry < 0 %}· vencido há {{ -cert.days_to_expiry }} dia(s)
+        {% elif cert.days_to_expiry == 0 %}· vence hoje
+        {% else %}· vence em {{ cert.days_to_expiry }} dia(s){% endif %}
+      {% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
+    <a href="{{ url_for('certificates.list_certificates') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+    {% if can_manage %}
+    <a href="{{ url_for('certificates.edit_certificate', cert_id=cert.id) }}" class="btn btn-primary"><i class="bi bi-pencil"></i> Editar</a>
+    <form method="post" action="{{ url_for('certificates.delete_certificate', cert_id=cert.id) }}"
+          onsubmit="return confirm('Remover este certificado?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Remover</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="form-section-title">Dados do certificado</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.9rem">
+    <div><div class="text-muted" style="font-size:0.8rem">Nome comum (CN)</div>{{ cert.common_name or '—' }}</div>
+    <div><div class="text-muted" style="font-size:0.8rem">Emissor</div>{{ cert.issuer_name or '—' }}</div>
+    <div><div class="text-muted" style="font-size:0.8rem">Válido de</div>{{ cert.not_before | date_br }}</div>
+    <div><div class="text-muted" style="font-size:0.8rem">Vence em</div>{{ cert.not_after | date_br }}</div>
+    <div><div class="text-muted" style="font-size:0.8rem">ID crt.sh</div>{{ cert.crtsh_id or '—' }}</div>
+    <div style="grid-column:1/-1"><div class="text-muted" style="font-size:0.8rem">Serial</div>
+      <span style="font-family:monospace;font-size:0.85rem;word-break:break-all">{{ cert.serial_number }}</span></div>
+  </div>
+  {% if cert.notes %}
+  <div class="mt-2"><div class="text-muted" style="font-size:0.8rem">Observações</div>{{ cert.notes }}</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="form-section-title">Domínios cobertos ({{ cert.domains|length }})</div>
+  {% if cert.domains %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Domínio</th><th>Ambiente</th><th>Curinga</th></tr></thead>
+      <tbody>
+        {% for d in cert.domains %}
+        <tr>
+          <td style="font-family:monospace;font-size:0.85rem">{{ d.domain }}</td>
+          <td>{{ d.environment | cert_env_label }}</td>
+          <td>{% if d.is_wildcard %}<i class="bi bi-check-lg"></i>{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><i class="bi bi-globe"></i> Sem domínios cadastrados.</div>
+  {% endif %}
+</div>
+
+{% if cert.last_alert_stage %}
+<p class="text-muted mt-2" style="font-size:0.82rem">
+  <i class="bi bi-envelope-check"></i> Último alerta: <strong>{{ cert.last_alert_stage }}</strong>
+  {% if cert.last_alert_sent_on %}em {{ cert.last_alert_sent_on | date_br }}{% endif %}.
+</p>
+{% endif %}
+{% endblock %}

@@ -5,22 +5,22 @@ pessoa": o que está sob responsabilidade dela agora e tudo que já passou
 pelas suas mãos (recebido/entregue).
 """
 from flask import Blueprint, abort, render_template
-from flask_login import current_user, login_required
 from sqlalchemy import or_
 
 from app.extensions import db
 from app.models.asset import Asset
 from app.models.employee import Employee
-from app.models.enums import UserRole
 from app.models.movement import AssetMovement
+from app.utils.decorators import can_manage_slug, module_required
 
 employees_bp = Blueprint("employees", __name__, url_prefix="/employees")
 
-_EDITORS = (UserRole.ADMIN, UserRole.TI)
+# Ficha de funcionário faz parte do módulo "Inventário de Máquinas".
+MODULE_SLUG = "inventario-maquinas"
 
 
 @employees_bp.route("/<int:employee_id>")
-@login_required
+@module_required(MODULE_SLUG)
 def view_employee(employee_id):
     emp = db.session.get(Employee, employee_id)
     if emp is None:
@@ -53,5 +53,5 @@ def view_employee(employee_id):
         emp=emp,
         current_assets=current_assets,
         movements=movements,
-        can_edit=current_user.role in _EDITORS,
+        can_edit=can_manage_slug(MODULE_SLUG),
     )

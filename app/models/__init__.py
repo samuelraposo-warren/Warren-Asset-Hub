@@ -11,6 +11,7 @@ A ordem respeita as dependências de ForeignKey.
 from app.models.user import User
 from app.models.audit import AuditLog
 from app.models.setting import Setting
+from app.models.access import ITSubsector, Module, UserModuleAccess
 from app.models.employee import Department, Employee
 from app.models.location import Branch, Location
 from app.models.supplier import Supplier
@@ -24,11 +25,25 @@ from app.models.specs import (
 )
 from app.models.movement import AssetMovement
 from app.models.maintenance import MaintenanceRecord
+from app.models.certificate import Certificate, CertificateDomain
+from app.models.network import (
+    NetworkArea,
+    NetworkDesk,
+    NetworkEquipment,
+    NetworkPoint,
+    NetworkSeat,
+    NetworkSector,
+    PatchPanel,
+    Rack,
+)
 
 __all__ = [
     "User",
     "AuditLog",
     "Setting",
+    "ITSubsector",
+    "Module",
+    "UserModuleAccess",
     "Department",
     "Employee",
     "Branch",
@@ -43,4 +58,14 @@ __all__ = [
     "NetworkSpec",
     "AssetMovement",
     "MaintenanceRecord",
+    "Certificate",
+    "CertificateDomain",
+    "Rack",
+    "PatchPanel",
+    "NetworkArea",
+    "NetworkPoint",
+    "NetworkEquipment",
+    "NetworkSector",
+    "NetworkDesk",
+    "NetworkSeat",
 ]

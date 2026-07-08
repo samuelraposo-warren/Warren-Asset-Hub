@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Novo módulo' if is_new else 'Editar módulo' }} — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><h1 class="mb-0">{{ 'Novo módulo' if is_new else 'Editar módulo' }}</h1></div>
+  <a href="{{ url_for('access.modules') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="name">Nome *</label>
+        <input type="text" id="name" name="name" class="form-control" required value="{{ mod.name or '' }}"
+               placeholder="Ex.: Certificados">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="slug">Slug</label>
+        <input type="text" id="slug" name="slug" class="form-control" value="{{ mod.slug or '' }}"
+               placeholder="gerado do nome se vazio">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="subsector_id">Sub-setor</label>
+        <select id="subsector_id" name="subsector_id" class="form-select">
+          <option value="">—</option>
+          {% for s in subsectors %}<option value="{{ s.id }}" {{ 'selected' if mod.subsector_id == s.id }}>{{ s.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="endpoint">Tela (endpoint)</label>
+        <input list="eps" id="endpoint" name="endpoint" class="form-control" value="{{ mod.endpoint or '' }}"
+               placeholder="Ex.: assets.list_assets (vazio = em breve)">
+        <datalist id="eps">{% for ep, label in endpoints %}{% if ep %}<option value="{{ ep }}">{{ label }}</option>{% endif %}{% endfor %}</datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="icon">Ícone</label>
+        <input type="text" id="icon" name="icon" class="form-control" value="{{ mod.icon or '' }}" placeholder="Ex.: bi-file-earmark-lock">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="sort_order">Ordem</label>
+        <input type="number" id="sort_order" name="sort_order" class="form-control" value="{{ mod.sort_order or 0 }}">
+      </div>
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="description">Descrição</label>
+      <input type="text" id="description" name="description" class="form-control" value="{{ mod.description or '' }}">
+    </div>
+    <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check-lg"></i> Salvar</button>
+  </form>
+</div>
+{% endblock %}

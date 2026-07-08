@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Novo usuário' if is_new else 'Editar usuário' }} — Inventário de TI{% endblock %}
 
-{% set role_label = {'ADMIN': 'Administrador (acesso total)', 'TI': 'TI (cadastra e edita)', 'VIEWER': 'Consulta (somente leitura)'} %}
+{% set role_label = {'ADMIN': 'Gestor de TI (acesso total)', 'TI': 'Analista', 'VIEWER': 'Consulta'} %}
 
 {% block content %}
 <div class="page-header">
@@ -39,6 +39,15 @@
           {% endfor %}
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label" for="subsector_id">Sub-setor de TI</label>
+        <select id="subsector_id" name="subsector_id" class="form-select">
+          <option value="">—</option>
+          {% for s in subsectors %}
+          <option value="{{ s.id }}" {{ 'selected' if user and user.subsector_id == s.id }}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
       {% if is_new %}
       <div class="form-group">
         <label class="form-label" for="password">Senha temporária *</label>
@@ -54,6 +63,44 @@
              {{ 'checked' if (user is none) or user.is_active }}>
       <label class="form-label mb-0" for="is_active">Usuário ativo (pode fazer login)</label>
     </div>
+
+    {% if modules %}
+    <div class="form-section-title">Acesso aos módulos</div>
+    <p class="text-muted" style="font-size:0.8rem;margin-top:-0.6rem">
+      O <strong>Gestor de TI</strong> já tem acesso total automaticamente. Para os demais, o que a
+      pessoa pode fazer é definido <strong>aqui, por módulo</strong>:
+      <strong>Ver</strong> = só leitura, <strong>Gerenciar</strong> = pode criar/editar/excluir.
+    </p>
+    <div class="d-flex gap-1 mb-2" style="flex-wrap:wrap">
+      <button type="button" class="btn btn-ghost btn-sm" data-accessall="MANAGE">
+        <i class="bi bi-shield-check"></i> Acesso total (tudo em Gerenciar)</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-accessall="VIEW">
+        <i class="bi bi-eye"></i> Só visualização (tudo em Ver)</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-accessall="">
+        <i class="bi bi-x-circle"></i> Remover acessos</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Módulo</th><th>Sub-setor</th><th style="width:200px">Acesso</th></tr></thead>
+        <tbody>
+          {% for m in modules %}
+          {% set cur = access_map.get(m.id) %}
+          <tr>
+            <td><i class="bi {{ m.icon or 'bi-box' }}"></i> {{ m.name }}</td>
+            <td class="text-muted">{{ m.subsector.name if m.subsector else '—' }}</td>
+            <td>
+              <select name="access_{{ m.id }}" class="form-select">
+                <option value="" {{ 'selected' if not cur }}>Sem acesso</option>
+                <option value="VIEW" {{ 'selected' if cur == 'VIEW' }}>Ver</option>
+                <option value="MANAGE" {{ 'selected' if cur == 'MANAGE' }}>Gerenciar</option>
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
 
     <button type="submit" class="btn btn-primary">
       <i class="bi bi-check-lg"></i> {{ 'Criar usuário' if is_new else 'Salvar alterações' }}
@@ -80,4 +127,13 @@
   </form>
 </div>
 {% endif %}
+
+<script>
+  document.querySelectorAll('[data-accessall]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var v = btn.getAttribute('data-accessall');
+      document.querySelectorAll('select[name^="access_"]').forEach(function (s) { s.value = v; });
+    });
+  });
+</script>
 {% endblock %}

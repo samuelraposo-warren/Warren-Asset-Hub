@@ -15,13 +15,14 @@ from flask_login import current_user
 
 from app.extensions import db
 from app.models.asset import Asset
-from app.models.enums import MaintenanceType, UserRole
+from app.models.enums import MaintenanceType
 from app.models.maintenance import MaintenanceRecord
-from app.utils.decorators import role_required
+from app.utils.decorators import can_manage_slug, module_required
 
 maintenance_bp = Blueprint("maintenance", __name__, url_prefix="/maintenance")
 
-_EDITORS = (UserRole.ADMIN, UserRole.TI)
+# Manutenções fazem parte do módulo "Inventário de Máquinas".
+MODULE_SLUG = "inventario-maquinas"
 
 
 def _str_or_none(value):
@@ -92,7 +93,7 @@ def _form_context():
 
 
 @maintenance_bp.route("/")
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG)
 def list_maintenance():
     status = request.args.get("status") or ""
     m_type = request.args.get("type") or ""
@@ -113,11 +114,12 @@ def list_maintenance():
         "maintenance/list.html",
         records=records,
         filters={"status": status, "type": m_type},
+        can_edit=can_manage_slug(MODULE_SLUG),
     )
 
 
 @maintenance_bp.route("/new", methods=["GET", "POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def new_maintenance():
     record = MaintenanceRecord()
     if request.method == "POST":
@@ -137,7 +139,7 @@ def new_maintenance():
 
 
 @maintenance_bp.route("/<int:record_id>/edit", methods=["GET", "POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def edit_maintenance(record_id):
     record = db.session.get(MaintenanceRecord, record_id)
     if record is None:
@@ -155,7 +157,7 @@ def edit_maintenance(record_id):
 
 
 @maintenance_bp.route("/<int:record_id>/delete", methods=["POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def delete_maintenance(record_id):
     record = db.session.get(MaintenanceRecord, record_id)
     if record is None:

@@ -100,6 +100,45 @@ def build_notifications():
     except Exception:  # noqa: BLE001 — avisos nunca devem quebrar a página
         return {"count": 0, "alerts": []}
 
+    # --- Certificados (bloco isolado: tabela pode não existir ainda) -----
+    try:
+        from datetime import date as _date, timedelta as _td
+
+        from app.models.certificate import Certificate
+
+        _today = _date.today()
+        _horizon = _today + _td(days=30)
+        cert_active = Certificate.query.filter(Certificate.is_active.is_(True))
+
+        cert_expiring = cert_active.filter(
+            Certificate.not_after.isnot(None),
+            Certificate.not_after >= _today,
+            Certificate.not_after <= _horizon,
+        ).count()
+        if cert_expiring:
+            items.append({
+                "level": "warning",
+                "icon": "bi-file-earmark-lock",
+                "text": "Certificados vencendo nos próximos 30 dias",
+                "count": cert_expiring,
+                "url": url_for("certificates.list_certificates", status="expiring"),
+            })
+
+        cert_expired = cert_active.filter(
+            Certificate.not_after.isnot(None),
+            Certificate.not_after < _today,
+        ).count()
+        if cert_expired:
+            items.append({
+                "level": "danger",
+                "icon": "bi-file-earmark-x",
+                "text": "Certificados vencidos",
+                "count": cert_expired,
+                "url": url_for("certificates.list_certificates", status="expired"),
+            })
+    except Exception:  # noqa: BLE001 — não deve afetar os demais avisos
+        pass
+
     # Anexa a classe de badge a cada item.
     for it in items:
         it["badge"] = _BADGE.get(it["level"], "badge-neutral")

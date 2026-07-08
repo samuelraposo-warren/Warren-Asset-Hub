@@ -60,6 +60,20 @@ class MaintenanceType(enum.Enum):
     UPGRADE = "UPGRADE"
 
 
+class PortStatus(enum.Enum):
+    """Situação de um ponto/porta de rede (módulo Infraestrutura)."""
+    FREE = "FREE"          # livre
+    OCCUPIED = "OCCUPIED"  # ocupada
+    DEFECT = "DEFECT"      # com defeito
+    RESERVED = "RESERVED"  # reservada
+
+
+class ModuleAccessLevel(enum.Enum):
+    """Nível de acesso de um usuário a um módulo do Centralizador."""
+    VIEW = "VIEW"      # Ver (somente leitura)
+    MANAGE = "MANAGE"  # Gerenciar (criar/editar)
+
+
 class AuditAction(enum.Enum):
     CREATE = "CREATE"
     UPDATE = "UPDATE"

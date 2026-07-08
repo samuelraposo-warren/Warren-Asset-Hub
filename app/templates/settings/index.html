@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Configurações — Inventário de TI{% endblock %}
+{% block title %}Configurações — {{ SETTINGS.company_name }}{% endblock %}
+
+{% set role_label = {'ADMIN': 'Gestor de TI', 'TI': 'Analista', 'VIEWER': 'Consulta'} %}
 
 {% block content %}
 <div class="page-header">
@@ -24,9 +26,13 @@
         <label class="form-label">E-mail</label>
         <input type="text" class="form-control" value="{{ current_user.email }}" readonly>
       </div>
-      <div class="form-group mb-0">
+      <div class="form-group">
         <label class="form-label">Papel</label>
-        <input type="text" class="form-control" value="{{ current_user.role.value }}" readonly>
+        <input type="text" class="form-control" value="{{ role_label.get(current_user.role.name, current_user.role.value) }}" readonly>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Sub-setor de TI</label>
+        <input type="text" class="form-control" value="{{ current_user.subsector.name if current_user.subsector else '—' }}" readonly>
       </div>
       <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check-lg"></i> Salvar</button>
     </form>
@@ -99,6 +105,14 @@
       </div>
       <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check-lg"></i> Salvar parâmetros</button>
     </form>
+  </div>
+
+  <!-- E-mail (SMTP) (ADMIN) -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-envelope-gear"></i> E-mail (SMTP)</div>
+    <p class="text-muted" style="font-size:0.85rem">
+      Servidor de e-mail usado nos alertas de vencimento de certificados.</p>
+    <a href="{{ url_for('settings.email') }}" class="btn btn-ghost"><i class="bi bi-sliders"></i> Configurar e-mail</a>
   </div>
 
   <!-- Atalhos de administração (ADMIN) -->

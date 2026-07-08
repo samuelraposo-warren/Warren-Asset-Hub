@@ -47,7 +47,7 @@ def _clear_fails(ip):
 def login():
     # Já autenticado -> vai direto para o painel.
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for("main.hub"))
 
     if request.method == "POST":
         ip = request.remote_addr or "unknown"
@@ -90,7 +90,7 @@ def login():
         # (evita open redirect).
         next_page = request.args.get("next")
         if not next_page or not next_page.startswith("/"):
-            next_page = url_for("main.dashboard")
+            next_page = url_for("main.hub")
         return redirect(next_page)
 
     return render_template("auth/login.html")

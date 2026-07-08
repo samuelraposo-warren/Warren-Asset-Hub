@@ -27,6 +27,46 @@ DEFAULT_WIDGETS = [
 ]
 
 
+@main_bp.route("/inicio")
+@login_required
+def hub():
+    """Home do Centralizador: módulos que o usuário pode acessar."""
+    from app.models.access import Module
+
+    modules = (
+        Module.query.filter(Module.is_active.is_(True))
+        .order_by(Module.sort_order, Module.name)
+        .all()
+    )
+    # (subsetor, [(module, level)]) apenas com o que o usuário enxerga.
+    groups = {}
+    for m in modules:
+        level = current_user._module_level(m)
+        if level is None:
+            continue
+        key = m.subsector
+        groups.setdefault(key, []).append((m, level))
+
+    # Ordena por nome do sub-setor (None por último) — base estável.
+    ordered = sorted(
+        groups.items(),
+        key=lambda kv: (kv[0] is None, kv[0].name if kv[0] else "z"),
+    )
+    # Dentro de cada grupo: módulos ATIVOS (com tela) primeiro, "em breve" depois.
+    ordered = [
+        (sub, sorted(items, key=lambda it: it[0].endpoint is None))
+        for sub, items in ordered
+    ]
+    # Entre os grupos: sub-setores que têm ao menos um módulo ativo vêm primeiro
+    # (ordenação estável preserva a ordem alfabética dentro de cada bloco).
+    ordered.sort(key=lambda si: not any(it[0].endpoint for it in si[1]))
+    return render_template(
+        "main/hub.html",
+        groups=ordered,
+        is_gestor=current_user.is_gestor,
+    )
+
+
 @main_bp.route("/")
 @main_bp.route("/dashboard")
 @login_required

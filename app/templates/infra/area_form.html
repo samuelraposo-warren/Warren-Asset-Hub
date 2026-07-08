@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Novo ambiente' if is_new else 'Editar ambiente' }} — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><h1 class="mb-0">{{ 'Novo ambiente' if is_new else 'Editar ambiente' }}</h1></div>
+  <a href="{{ url_for('network.areas') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="name">Nome *</label>
+        <input type="text" id="name" name="name" class="form-control" required
+               value="{{ area.name or '' }}" placeholder="Ex.: CPD, Mesa de Operações">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="kind">Tipo</label>
+        <input list="kinds" id="kind" name="kind" class="form-control"
+               value="{{ area.kind or '' }}" placeholder="CPD, Sala técnica, Operações…">
+        <datalist id="kinds">
+          {% for k in kinds %}<option value="{{ k }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="description">Descrição / função</label>
+        <input type="text" id="description" name="description" class="form-control"
+               value="{{ area.description or '' }}" placeholder="Para que serve a sala">
+      </div>
+    </div>
+    {% if all_sectors %}
+    <div class="form-group">
+      <label class="form-label">Setores</label>
+      <div class="d-flex gap-2" style="flex-wrap:wrap">
+        {% for s in all_sectors %}
+        <label class="form-check">
+          <input class="form-check-input" type="checkbox" name="sectors" value="{{ s.id }}"
+                 {{ 'checked' if s in area.sectors }}>
+          {{ s.name }}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    <div class="form-group">
+      <label class="form-label" for="notes">Observações</label>
+      <textarea class="form-control" id="notes" name="notes" rows="2">{{ area.notes or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+  </form>
+</div>
+{% endblock %}

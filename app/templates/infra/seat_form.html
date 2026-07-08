@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Posição — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">Editar posição</h1>
+    <p class="text-muted mb-0">Mesa: {{ seat.desk.name }}</p>
+  </div>
+  <a href="{{ url_for('network.desk_detail', desk_id=seat.desk_id) }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label class="form-label" for="employee_id">Pessoa</label>
+      <select id="employee_id" name="employee_id" class="form-select">
+        <option value="">— (posição vazia)</option>
+        {% for e in employees %}
+        <option value="{{ e.id }}" {{ 'selected' if seat.employee_id == e.id }}>
+          {{ e.name }}{% if e.department %} · {{ e.department.name }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Máquina (do inventário)</label>
+      <div class="form-control" style="background:var(--color-surface);display:flex;align-items:center;gap:0.5rem">
+        {% if machine %}
+          <i class="bi bi-hdd"></i>
+          <a href="{{ url_for('assets.view_asset', asset_id=machine.id) }}">{{ machine.asset_tag }}</a>
+          <span class="text-muted">— {{ machine.brand or '' }} {{ machine.model or '' }}</span>
+        {% else %}
+          <span class="text-muted">Aparece automaticamente ao vincular uma pessoa que tenha máquina no inventário.</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="label">Rótulo (se não for uma pessoa cadastrada)</label>
+      <input type="text" id="label" name="label" class="form-control" value="{{ seat.label or '' }}"
+             placeholder="Ex.: Estagiário, Visitante">
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="notes">Observações</label>
+      <input type="text" id="notes" name="notes" class="form-control" value="{{ seat.notes or '' }}">
+    </div>
+    <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check-lg"></i> Salvar</button>
+  </form>
+</div>
+{% endblock %}

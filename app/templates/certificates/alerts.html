@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Enviar alertas — Certificados{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-envelope"></i> Enviar alertas</h1>
+    <p class="text-muted mb-0">Revise o alcance e os destinatários antes de enviar.</p>
+  </div>
+  <a href="{{ url_for('certificates.list_certificates') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2" style="border-left:3px solid var(--color-accent,#d4a017)">
+  <p class="text-muted mb-0" style="font-size:0.88rem">
+    <i class="bi bi-info-circle"></i>
+    Este é um envio <strong>manual/imediato</strong> (um e-mail-resumo com os certificados abaixo).
+    A <strong>automação diária continua funcionando normalmente</strong> enquanto o sistema
+    estiver ligado — este envio não interfere nela.
+  </p>
+</div>
+
+<!-- 1) Alcance: o que enviar agora -->
+<div class="card mb-2">
+  <div class="card-title"><i class="bi bi-funnel"></i>1. O que enviar</div>
+  <form method="get" action="{{ url_for('certificates.alerts_review') }}"
+        class="form-grid" style="align-items:end" data-autosubmit>
+    <div class="form-group mb-0">
+      <label class="form-label" for="expired">Certificados vencidos</label>
+      <select id="expired" name="expired" class="form-select">
+        <option value="1" {{ 'selected' if scope.expired }}>Incluir vencidos</option>
+        <option value="0" {{ 'selected' if not scope.expired }}>Não incluir vencidos</option>
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="days">Vencendo em até</label>
+      <select id="days" name="days" class="form-select">
+        <option value="none" {{ 'selected' if scope.days is none }}>— (não incluir)</option>
+        {% for d in day_options %}
+        <option value="{{ d }}" {{ 'selected' if scope.days == d }}>{{ d }} dias</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      <noscript><button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Atualizar</button></noscript>
+    </div>
+  </form>
+</div>
+
+<!-- 2) Certificados no alcance -->
+<div class="card mb-2">
+  <div class="card-title">
+    <i class="bi bi-file-earmark-lock"></i> 2. Certificados incluídos
+    <span class="badge badge-neutral">{{ certs|length }}</span>
+  </div>
+  {% if certs %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Nome comum (CN)</th><th>Vence em</th><th>Situação</th></tr></thead>
+      <tbody>
+        {% for c in certs %}
+        <tr>
+          <td><a href="{{ url_for('certificates.view_certificate', cert_id=c.id) }}">{{ c.common_name or '—' }}</a></td>
+          <td>{{ c.not_after | date_br }}
+            <span class="text-muted" style="font-size:0.78rem">
+              {% if c.days_to_expiry < 0 %}(há {{ -c.days_to_expiry }}d)
+              {% elif c.days_to_expiry == 0 %}(hoje)
+              {% else %}(em {{ c.days_to_expiry }}d){% endif %}</span>
+          </td>
+          <td><span class="badge {{ c.status_key | cert_status_badge }}">{{ c.status_key | cert_status_label }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><i class="bi bi-check2-circle"></i> Nenhum certificado no alcance selecionado.</div>
+  {% endif %}
+</div>
+
+<!-- 3) Destinatários + envio -->
+<form method="post" action="{{ url_for('certificates.send_alerts') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="expired" value="{{ '1' if scope.expired else '0' }}">
+  <input type="hidden" name="days" value="{{ scope.days if scope.days is not none else 'none' }}">
+
+  <div class="card mb-2">
+    <div class="card-title">
+      <i class="bi bi-people"></i> 3. Destinatários
+      <span class="badge badge-neutral">{{ recipients|length }}</span>
+    </div>
+    {% if recipients %}
+    <p class="text-muted" style="font-size:0.85rem">
+      Todos com acesso ao módulo já vêm marcados. Desmarque quem não deve receber.</p>
+    <div class="d-flex gap-1 mb-2">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.rcp').forEach(c=>c.checked=true)">Marcar todos</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.rcp').forEach(c=>c.checked=false)">Desmarcar todos</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.5rem">
+      {% for r in recipients %}
+      <label style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.7rem;background:var(--color-surface-2,#2a1a1a);border-radius:8px">
+        <input class="rcp" type="checkbox" name="recipients" value="{{ r.email }}" checked>
+        <span>
+          <span style="font-weight:500">{{ r.name }}</span><br>
+          <span class="text-muted" style="font-size:0.8rem">{{ r.email }}</span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-person-x"></i>
+      Ninguém com acesso ao módulo (ou sem e-mail). Conceda acesso em Usuários,
+      ou defina uma cópia fixa em Configurações → E-mail (SMTP).
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="d-flex gap-1">
+    <button type="submit" class="btn btn-primary"
+            {{ 'disabled' if not certs or not recipients }}
+            onclick="return confirm('Enviar o alerta agora para os destinatários marcados?');">
+      <i class="bi bi-send"></i> Enviar agora ({{ certs|length }} certificado(s))
+    </button>
+    <a href="{{ url_for('certificates.list_certificates') }}" class="btn btn-ghost">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

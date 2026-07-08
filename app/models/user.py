@@ -34,6 +34,12 @@ class User(UserMixin, db.Model):
     # Força a troca de senha no próximo login (senha temporária / redefinida).
     must_change_password = db.Column(db.Boolean, nullable=False, default=False)
 
+    # Sub-setor de TI ao qual o usuário pertence (Acessos, Service Desk, Infra, Cyber).
+    subsector_id = db.Column(
+        db.Integer, db.ForeignKey("it_subsectors.id"), nullable=True
+    )
+    subsector = db.relationship("ITSubsector")
+
     # --- Senha -------------------------------------------------------
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -46,8 +52,33 @@ class User(UserMixin, db.Model):
     def is_admin(self):
         return self.role == UserRole.ADMIN
 
+    @property
+    def is_gestor(self):
+        """Gestor de TI: acesso total e administração (== ADMIN)."""
+        return self.role == UserRole.ADMIN
+
     def has_role(self, *roles):
         return self.role in roles
+
+    # --- Acesso a módulos do Centralizador --------------------------
+    def _module_level(self, module):
+        if module is None:
+            return None
+        from app.models.enums import ModuleAccessLevel
+        if self.is_gestor:
+            return ModuleAccessLevel.MANAGE
+        from app.models.access import UserModuleAccess
+        acc = UserModuleAccess.query.filter_by(
+            user_id=self.id, module_id=module.id
+        ).first()
+        return acc.level if acc else None
+
+    def can_view(self, module):
+        return self._module_level(module) is not None
+
+    def can_manage(self, module):
+        from app.models.enums import ModuleAccessLevel
+        return self._module_level(module) == ModuleAccessLevel.MANAGE
 
     # --- Preferências (JSON) ----------------------------------------
     def get_pref(self, key, default=None):

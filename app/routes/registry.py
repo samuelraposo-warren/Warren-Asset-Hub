@@ -17,17 +17,17 @@ from flask import (
     request,
     url_for,
 )
-from flask_login import current_user, login_required
+from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models.enums import UserRole
-from app.utils.decorators import role_required
+from app.utils.decorators import can_manage_slug, module_required
 from app.utils.registry_config import REGISTRY
 
 registry_bp = Blueprint("registry", __name__, url_prefix="/registry")
 
-_EDITORS = (UserRole.ADMIN, UserRole.TI)
+# Cadastros de apoio fazem parte do módulo "Inventário de Máquinas".
+MODULE_SLUG = "inventario-maquinas"
 
 
 def _cfg_or_404(entity):
@@ -71,7 +71,7 @@ def _apply(cfg, obj, form):
 
 
 @registry_bp.route("/<entity>/")
-@login_required
+@module_required(MODULE_SLUG)
 def list_entity(entity):
     cfg = _cfg_or_404(entity)
     model = cfg["model"]
@@ -82,12 +82,12 @@ def list_entity(entity):
         cfg=cfg,
         entity=entity,
         items=items,
-        can_edit=current_user.role in _EDITORS,
+        can_edit=can_manage_slug(MODULE_SLUG),
     )
 
 
 @registry_bp.route("/<entity>/new", methods=["GET", "POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def new_entity(entity):
     cfg = _cfg_or_404(entity)
     obj = cfg["model"]()
@@ -110,7 +110,7 @@ def new_entity(entity):
 
 
 @registry_bp.route("/<entity>/<int:item_id>/edit", methods=["GET", "POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def edit_entity(entity, item_id):
     cfg = _cfg_or_404(entity)
     obj = db.session.get(cfg["model"], item_id)
@@ -134,7 +134,7 @@ def edit_entity(entity, item_id):
 
 
 @registry_bp.route("/<entity>/<int:item_id>/delete", methods=["POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def delete_entity(entity, item_id):
     cfg = _cfg_or_404(entity)
     model = cfg["model"]

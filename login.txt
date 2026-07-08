@@ -1,0 +1,2 @@
+analista.infra@warren.com / infra123 — Analista/Infra: Gerenciar Inventário, Ver Rede.
+consulta@warren.com / consulta123 — Consulta: Ver Inventário.

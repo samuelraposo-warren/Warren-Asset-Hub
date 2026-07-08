@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Editar ponto {{ point.label }} — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">Editar ponto</h1>
+    <p class="text-muted mb-0">{{ point.panel.rack.code }} · {{ point.panel.code }} · nº {{ point.number }}</p>
+  </div>
+  <a href="{{ url_for('network.panel', panel_id=point.patch_panel_id) }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="status">Status</label>
+        <select id="status" name="status" class="form-select">
+          {% for s in PortStatus %}
+          <option value="{{ s.name }}" {{ 'selected' if point.status == s }}>{{ s.value | port_label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="area_id">Área / Setor</label>
+        <select id="area_id" name="area_id" class="form-select">
+          <option value="">—</option>
+          {% for a in areas %}<option value="{{ a.id }}" {{ 'selected' if point.area_id == a.id }}>{{ a.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="endpoint">O que está plugado</label>
+        <input type="text" id="endpoint" name="endpoint" class="form-control"
+               value="{{ point.endpoint or '' }}" placeholder="Ex.: Desktop recepção, Telefone ramal 4021, Access Point">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="notes">Observações</label>
+      <textarea class="form-control" id="notes" name="notes" rows="2">{{ point.notes or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+  </form>
+</div>
+{% endblock %}

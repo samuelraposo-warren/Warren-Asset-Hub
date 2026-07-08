@@ -24,13 +24,14 @@ from app.models.location import Location
 from app.models.maintenance import MaintenanceRecord
 from app.models.movement import AssetMovement
 from app.models.supplier import Supplier
-from app.utils.decorators import role_required
+from app.utils.decorators import can_manage_slug, module_required
 from app.utils.spec_config import SPEC_CONFIG
 
 assets_bp = Blueprint("assets", __name__, url_prefix="/assets")
 
-# Papéis autorizados a criar/editar/baixar ativos.
-_EDITORS = (UserRole.ADMIN, UserRole.TI)
+# Ativos fazem parte do módulo "Inventário de Máquinas". Acesso: ver exige
+# can_view; criar/editar/baixar/atribuir exige "Gerenciar" (can_manage).
+MODULE_SLUG = "inventario-maquinas"
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +208,7 @@ def _rows_per_page():
 
 
 @assets_bp.route("/")
-@login_required
+@module_required(MODULE_SLUG)
 def list_assets():
     query, filters = _filtered_query(request.args)
     page = request.args.get("page", 1, type=int)
@@ -218,12 +219,12 @@ def list_assets():
         pagination=pagination,
         asset_types=AssetType.query.order_by(AssetType.name).all(),
         filters=filters,
-        can_edit=current_user.role in _EDITORS,
+        can_edit=can_manage_slug(MODULE_SLUG),
     )
 
 
 @assets_bp.route("/export")
-@login_required
+@module_required(MODULE_SLUG)
 def export_assets():
     """Exporta a listagem filtrada de ativos para um arquivo .xlsx."""
     try:
@@ -287,7 +288,7 @@ def export_assets():
 
 
 @assets_bp.route("/<int:asset_id>/qrcode.png")
-@login_required
+@module_required(MODULE_SLUG)
 def qrcode_png(asset_id):
     """PNG do QR Code que aponta para a ficha do ativo."""
     asset = db.session.get(Asset, asset_id)
@@ -313,7 +314,7 @@ def qrcode_png(asset_id):
 
 
 @assets_bp.route("/<int:asset_id>/label")
-@login_required
+@module_required(MODULE_SLUG)
 def label(asset_id):
     """Página de etiqueta imprimível com QR Code."""
     asset = db.session.get(Asset, asset_id)
@@ -323,7 +324,7 @@ def label(asset_id):
 
 
 @assets_bp.route("/<int:asset_id>/termo")
-@login_required
+@module_required(MODULE_SLUG)
 def termo(asset_id):
     """Gera o termo de responsabilidade (PDF) do ativo atribuído."""
     asset = db.session.get(Asset, asset_id)
@@ -436,7 +437,7 @@ def _build_termo_pdf(asset):
 
 
 @assets_bp.route("/<int:asset_id>")
-@login_required
+@module_required(MODULE_SLUG)
 def view_asset(asset_id):
     asset = db.session.get(Asset, asset_id)
     if asset is None:
@@ -460,12 +461,12 @@ def view_asset(asset_id):
         spec=spec,
         movements=movements,
         maintenances=maintenances,
-        can_edit=current_user.role in _EDITORS,
+        can_edit=can_manage_slug(MODULE_SLUG),
     )
 
 
 @assets_bp.route("/new", methods=["GET", "POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def new_asset():
     asset = Asset()
     if request.method == "POST":
@@ -486,7 +487,7 @@ def new_asset():
 
 
 @assets_bp.route("/<int:asset_id>/edit", methods=["GET", "POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def edit_asset(asset_id):
     asset = db.session.get(Asset, asset_id)
     if asset is None:
@@ -508,7 +509,7 @@ def edit_asset(asset_id):
 
 
 @assets_bp.route("/<int:asset_id>/delete", methods=["POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def delete_asset(asset_id):
     asset = db.session.get(Asset, asset_id)
     if asset is None:
@@ -521,7 +522,7 @@ def delete_asset(asset_id):
 
 
 @assets_bp.route("/<int:asset_id>/assign", methods=["GET", "POST"])
-@role_required(*_EDITORS)
+@module_required(MODULE_SLUG, manage=True)
 def assign_asset(asset_id):
     """Atribui/transfere um ativo: grava histórico e atualiza o estado atual."""
     asset = db.session.get(Asset, asset_id)

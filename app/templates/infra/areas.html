@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Ambientes — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-door-open"></i> Ambientes / Salas</h1>
+    <p class="text-muted mb-0">{{ areas|length }} ambiente(s) — CPD, Mesa de Operações, etc.</p>
+  </div>
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
+    <a href="{{ url_for('network.sectors') }}" class="btn btn-ghost"><i class="bi bi-tags"></i> Setores</a>
+    <a href="{{ url_for('network.overview') }}" class="btn btn-ghost"><i class="bi bi-diagram-3"></i> Cabeamento</a>
+    {% if can_edit %}
+    <a href="{{ url_for('network.new_area') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo ambiente</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if areas %}
+<div class="panel-grid">
+  {% for a in areas %}
+  <a class="panel-card" href="{{ url_for('network.area_detail', area_id=a.id) }}">
+    <div class="panel-code">{{ a.name }}</div>
+    {% if a.kind %}<div class="text-muted" style="font-size:0.75rem;margin-bottom:0.4rem">{{ a.kind }}</div>{% endif %}
+    <div class="panel-nums">
+      <span><i class="bi bi-hdd-stack"></i> {{ eq_counts.get(a.id, 0) }} equip.</span>
+      <span><i class="bi bi-ethernet"></i> {{ pt_counts.get(a.id, 0) }} pts</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-door-open"></i>
+  Nenhum ambiente cadastrado ainda.
+  {% if can_edit %}<br><a href="{{ url_for('network.new_area') }}">Cadastrar o primeiro</a> (ex.: CPD, Mesa de Operações).{% endif %}
+</div>
+{% endif %}
+{% endblock %}

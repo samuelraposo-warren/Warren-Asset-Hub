@@ -27,6 +27,42 @@ AUDIT_BADGES = {
     "DELETE": "badge-defective",
 }
 
+# Rede / Infraestrutura
+PORT_LABELS = {
+    "FREE": "Livre",
+    "OCCUPIED": "Ocupada",
+    "DEFECT": "Defeito",
+    "RESERVED": "Reservada",
+}
+PORT_BADGES = {
+    "FREE": "badge-active",
+    "OCCUPIED": "badge-loaned",
+    "DEFECT": "badge-defective",
+    "RESERVED": "badge-maintenance",
+}
+
+# Certificados
+CERT_STATUS_LABELS = {
+    "expired": "Vencido",
+    "critical": "Crítico",
+    "warning": "Vencendo",
+    "valid": "Válido",
+    "unknown": "Sem data",
+}
+CERT_STATUS_BADGES = {
+    "expired": "badge-defective",
+    "critical": "badge-stolen",
+    "warning": "badge-maintenance",
+    "valid": "badge-active",
+    "unknown": "badge-neutral",
+}
+CERT_ENV_LABELS = {
+    "prd": "Produção",
+    "stg": "Staging",
+    "hml": "Homologação",
+    "dev": "Desenvolvimento",
+}
+
 # Manutenção
 MAINTENANCE_LABELS = {
     "PREVENTIVE": "Preventiva",
@@ -110,12 +146,17 @@ def register_template_helpers(app):
     app.add_template_filter(lambda v: AUDIT_BADGES.get(v, "badge-neutral"), "audit_badge")
     app.add_template_filter(lambda v: MAINTENANCE_LABELS.get(v, v), "maintenance_label")
     app.add_template_filter(lambda v: MAINTENANCE_BADGES.get(v, "badge-neutral"), "maintenance_badge")
+    app.add_template_filter(lambda v: PORT_LABELS.get(v, v), "port_label")
+    app.add_template_filter(lambda v: PORT_BADGES.get(v, "badge-neutral"), "port_badge")
+    app.add_template_filter(lambda v: CERT_STATUS_LABELS.get(v, v), "cert_status_label")
+    app.add_template_filter(lambda v: CERT_STATUS_BADGES.get(v, "badge-neutral"), "cert_status_badge")
+    app.add_template_filter(lambda v: CERT_ENV_LABELS.get(v, v or "—"), "cert_env_label")
 
     @app.context_processor
     def inject_enums():
-        from app.models.enums import AuditAction, MaintenanceType
+        from app.models.enums import AuditAction, MaintenanceType, PortStatus
         from app.utils.registry_config import REGISTRY
-        from app.utils.settings import current_settings
+        from app.utils.settings import public_settings
 
         registry_menu = [
             {"slug": slug, "plural": cfg["plural"], "icon": cfg["icon"]}
@@ -129,7 +170,9 @@ def register_template_helpers(app):
             "STATUS_LABELS": STATUS_LABELS,
             "CONDITION_LABELS": CONDITION_LABELS,
             "REGISTRY_MENU": registry_menu,
-            "SETTINGS": current_settings(),
+            "SETTINGS": public_settings(),
+            "PortStatus": PortStatus,
+            "PORT_LABELS": PORT_LABELS,
         }
 
     @app.context_processor
@@ -139,3 +182,22 @@ def register_template_helpers(app):
             return {"NOTIFICATIONS": {"count": 0, "alerts": []}}
         from app.utils.notifications import build_notifications
         return {"NOTIFICATIONS": build_notifications()}
+
+    @app.context_processor
+    def inject_user_modules():
+        """Módulos do Centralizador que o usuário atual pode acessar."""
+        from flask_login import current_user
+        if not getattr(current_user, "is_authenticated", False):
+            return {"MY_MODULES": []}
+        try:
+            from app.models.access import Module
+            mods = (
+                Module.query.filter(Module.is_active.is_(True))
+                .order_by(Module.sort_order, Module.name).all()
+            )
+            visible = [m for m in mods if current_user._module_level(m) is not None]
+            # Ativos (com tela) primeiro; "em breve" por último (ordenação estável).
+            visible.sort(key=lambda m: m.endpoint is None)
+        except Exception:  # noqa: BLE001 — nunca deve quebrar o layout
+            visible = []
+        return {"MY_MODULES": visible}

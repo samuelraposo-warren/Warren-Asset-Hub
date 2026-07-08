@@ -16,12 +16,41 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models.enums import UserRole
+from app.models.access import ITSubsector, Module, UserModuleAccess
+from app.models.enums import ModuleAccessLevel, UserRole
 from app.models.user import User
 from app.utils.decorators import role_required
+
+
+def _access_form_ctx(user=None):
+    """Sub-setores, módulos e o mapa de acesso atual do usuário."""
+    access_map = {}
+    if user is not None:
+        access_map = {a.module_id: a.level.name for a in user.module_access}
+    return {
+        "subsectors": ITSubsector.query.filter_by(is_active=True).order_by(ITSubsector.name).all(),
+        "modules": Module.query.filter_by(is_active=True).order_by(Module.sort_order, Module.name).all(),
+        "access_map": access_map,
+    }
+
+
+def _apply_module_access(user, form):
+    """Aplica os acessos por módulo enviados no formulário (Sem / Ver / Gerenciar)."""
+    existing = {a.module_id: a for a in user.module_access}
+    for m in Module.query.filter_by(is_active=True).all():
+        val = form.get(f"access_{m.id}") or ""
+        if val in ("VIEW", "MANAGE"):
+            lvl = ModuleAccessLevel[val]
+            if m.id in existing:
+                existing[m.id].level = lvl
+            else:
+                db.session.add(UserModuleAccess(user_id=user.id, module_id=m.id, level=lvl))
+        elif m.id in existing:
+            db.session.delete(existing[m.id])
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -36,8 +65,28 @@ def _admin_count(exclude_id=None):
 @users_bp.route("/")
 @role_required(UserRole.ADMIN)
 def list_users():
-    users = User.query.order_by(User.name).all()
-    return render_template("users/list.html", users=users)
+    q = (request.args.get("q") or "").strip()
+    role = (request.args.get("role") or "").strip()
+    status = (request.args.get("status") or "").strip()
+
+    query = User.query
+    if q:
+        like = f"%{q}%"
+        query = query.filter(or_(User.name.ilike(like), User.email.ilike(like)))
+    if role in UserRole.__members__:
+        query = query.filter(User.role == UserRole[role])
+    if status == "active":
+        query = query.filter(User.is_active.is_(True))
+    elif status == "inactive":
+        query = query.filter(User.is_active.is_(False))
+
+    users = query.order_by(User.name).all()
+    return render_template(
+        "users/list.html",
+        users=users,
+        roles=list(UserRole),
+        filters={"q": q, "role": role, "status": status},
+    )
 
 
 @users_bp.route("/new", methods=["GET", "POST"])
@@ -66,10 +115,14 @@ def new_user():
                 email=email,
                 role=_role_or_default(role_name),
                 is_active=is_active,
+                subsector_id=request.form.get("subsector_id", type=int) or None,
+                must_change_password=True,
             )
             user.set_password(password)
             try:
                 db.session.add(user)
+                db.session.flush()
+                _apply_module_access(user, request.form)
                 db.session.commit()
                 flash(
                     f"Usuário '{email}' criado. Entregue a senha temporária "
@@ -83,7 +136,8 @@ def new_user():
         flash(error, "danger")
 
     return render_template(
-        "users/form.html", user=None, is_new=True, roles=list(UserRole)
+        "users/form.html", user=None, is_new=True, roles=list(UserRole),
+        **_access_form_ctx(),
     )
 
 
@@ -116,13 +170,16 @@ def edit_user(user_id):
             user.name = name
             user.role = new_role
             user.is_active = is_active
+            user.subsector_id = request.form.get("subsector_id", type=int) or None
+            _apply_module_access(user, request.form)
             db.session.commit()
             flash("Usuário atualizado.", "success")
             return redirect(url_for("users.list_users"))
         flash(error, "danger")
 
     return render_template(
-        "users/form.html", user=user, is_new=False, roles=list(UserRole)
+        "users/form.html", user=user, is_new=False, roles=list(UserRole),
+        **_access_form_ctx(user),
     )
 
 

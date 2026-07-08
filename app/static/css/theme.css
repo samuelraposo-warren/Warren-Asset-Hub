@@ -121,6 +121,18 @@ a:hover { color: var(--color-primary); }
   color: var(--color-white);
 }
 .nav-link-item.active .bi { color: var(--color-white); }
+.nav-beta {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: #fff;
+}
+.nav-link-item.active .nav-beta { background: rgba(255, 255, 255, 0.25); }
 
 .sidebar-footer {
   border-top: 1px solid var(--color-border);
@@ -241,6 +253,13 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 .form-check { display: flex; align-items: center; gap: 0.5rem; }
 .form-check-input { width: 1rem; height: 1rem; accent-color: var(--color-primary); }
+
+/* Checkboxes/radios seguem o tema escuro (sem fundo branco padrão). */
+input[type="checkbox"], input[type="radio"] {
+  accent-color: var(--color-primary);
+  color-scheme: dark;
+  cursor: pointer;
+}
 
 .form-grid {
   display: grid;
@@ -487,3 +506,108 @@ body.density-compact .stat-card .stat-value { font-size: 1.9rem; }
   color: var(--color-text-muted); font-size: 0.85rem;
 }
 .notif-empty .bi { color: #58D68D; margin-right: 0.3rem; }
+
+/* ---------- Módulo Infraestrutura (rede) ---------- */
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+.panel-card {
+  display: block;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  color: var(--color-text);
+}
+.panel-card:hover { border-color: var(--color-border-strong); color: var(--color-text); }
+.panel-code { font-weight: 600; margin-bottom: 0.45rem; }
+.panel-occ-bar {
+  height: 6px; background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px; overflow: hidden; margin-bottom: 0.4rem;
+}
+.panel-occ-fill { height: 100%; background: var(--color-primary); }
+.panel-nums { display: flex; justify-content: space-between; font-size: 0.75rem; }
+
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+.dot-free { background: #58D68D; } .dot-occ { background: #5DADE2; }
+.dot-def { background: #E74C3C; }  .dot-res { background: #F5B041; }
+
+.port-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 0.5rem;
+}
+.port {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 54px; padding: 0.35rem;
+  border: 1px solid var(--color-border); border-radius: 8px;
+  background: var(--color-surface-2); color: var(--color-text); text-align: center;
+}
+.port:hover { border-color: var(--color-border-strong); color: var(--color-text); }
+.port-num { font-weight: 600; font-size: 0.95rem; }
+.port-ep {
+  font-size: 0.65rem; color: var(--color-text-muted);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.port-free { border-left: 4px solid #58D68D; }
+.port-occ  { border-left: 4px solid #5DADE2; }
+.port-def  { border-left: 4px solid #E74C3C; }
+.port-res  { border-left: 4px solid #F5B041; }
+
+/* ---------- Hub do Centralizador (módulos) ---------- */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+.module-card {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  min-height: 150px; padding: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  color: var(--color-text);
+  transition: border-color 0.15s, transform 0.1s;
+}
+.module-card:hover { border-color: var(--color-border-strong); color: var(--color-text); transform: translateY(-2px); }
+.module-card.is-disabled { opacity: 0.55; }
+.module-card.is-disabled:hover { transform: none; border-color: var(--color-border); }
+.module-ico { font-size: 1.9rem; color: var(--color-primary-light); }
+.module-name { font-weight: 600; font-size: 1.05rem; }
+.module-desc { font-size: 0.82rem; color: var(--color-text-muted); flex-grow: 1; }
+.module-foot { display: flex; gap: 0.4rem; }
+
+/* ---------- Mesa vista de cima (posições) ---------- */
+.desk-plan { display: flex; flex-direction: column; align-items: center; }
+.desk-row {
+  display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center;
+  min-height: 10px;
+}
+.desk-surface {
+  width: 100%; max-width: 680px; margin: 0.55rem 0;
+  background: var(--color-surface-2);
+  border: 2px solid var(--color-border-strong);
+  border-radius: 12px; padding: 0.7rem;
+  text-align: center; color: var(--color-text-muted);
+  font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.seat {
+  width: 128px; min-height: 84px;
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  padding: 0.55rem 0.4rem; text-align: center;
+  background: var(--color-surface); color: var(--color-text);
+  border: 1px solid var(--color-border); border-radius: 12px;
+}
+.seat.empty { border-style: dashed; }
+.seat-ico { font-size: 1.25rem; color: var(--color-primary-light); }
+.seat.empty .seat-ico { color: var(--color-text-muted); }
+.seat-name { font-size: 0.82rem; font-weight: 500; line-height: 1.2; }
+.seat-machine { font-size: 0.72rem; }
+.seat-actions { display: flex; gap: 0.5rem; margin-top: 0.2rem; }
+.seat-actions a, .seat-actions button {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--color-text-muted); font-size: 0.8rem; line-height: 1;
+}
+.seat-actions a:hover, .seat-actions button:hover { color: var(--color-text); }

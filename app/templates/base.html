@@ -20,30 +20,56 @@
       </div>
       <nav class="sidebar-nav">
         {% set nav = request.endpoint or '' %}
-        <a class="nav-link-item {{ 'active' if nav.startswith('main.') }}"
-           href="{{ url_for('main.dashboard') }}">
-          <i class="bi bi-grid-1x2"></i> Painel
-        </a>
-        <a class="nav-link-item {{ 'active' if nav.startswith('assets.') }}"
-           href="{{ url_for('assets.list_assets') }}">
-          <i class="bi bi-hdd-stack"></i> Ativos
-        </a>
-        <a class="nav-link-item {{ 'active' if nav.startswith('maintenance.') }}"
-           href="{{ url_for('maintenance.list_maintenance') }}">
-          <i class="bi bi-tools"></i> Manutenções
-        </a>
-        {% if current_user.is_admin %}
-        <a class="nav-link-item {{ 'active' if nav.startswith('audit.') }}"
-           href="{{ url_for('audit.list_logs') }}">
-          <i class="bi bi-shield-check"></i> Auditoria
-        </a>
-        <a class="nav-link-item {{ 'active' if nav.startswith('users.') }}"
-           href="{{ url_for('users.list_users') }}">
-          <i class="bi bi-people"></i> Usuários
-        </a>
+        {% set in_inventory = nav == 'main.dashboard' or nav.startswith('assets.') or nav.startswith('maintenance.') or nav.startswith('registry.') or nav.startswith('audit.') %}
+        {% set in_network = nav.startswith('network.') %}
+        {% set in_certificates = nav.startswith('certificates.') %}
+        {% set current_area = 'Inventário de Máquinas' if in_inventory
+              else 'Infraestrutura de Rede' if in_network
+              else 'Certificados' if in_certificates else None %}
+
+        {% if current_area %}
+        <div style="margin:0 0.85rem 0.7rem;padding:0.5rem 0.7rem;background:var(--color-surface-2,#2a1a1a);border-radius:8px">
+          <div class="text-muted" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.06em">Centralizador</div>
+          <div style="font-size:0.92rem;font-weight:600;line-height:1.2">{{ current_area }}</div>
+        </div>
         {% endif %}
 
-        <div class="form-section-title" style="margin:1.25rem 0 0.5rem 0.85rem">Cadastros</div>
+        <a class="nav-link-item {{ 'active' if nav == 'main.hub' }}"
+           href="{{ url_for('main.hub') }}">
+          <i class="bi bi-house"></i> Início
+        </a>
+
+        {# ----- Lista de módulos (fora de um módulo específico) ----- #}
+        {% if not in_inventory and not in_network and not in_certificates and MY_MODULES %}
+        <div class="form-section-title" style="margin:1.1rem 0 0.4rem 0.85rem">Módulos</div>
+        {% for m in MY_MODULES %}
+          {% if m.endpoint %}
+          <a class="nav-link-item" href="{{ url_for(m.endpoint) }}">
+            <i class="bi {{ m.icon or 'bi-box' }}"></i> {{ m.name }}
+          </a>
+          {% else %}
+          <span class="nav-link-item" style="opacity:0.5;cursor:default">
+            <i class="bi {{ m.icon or 'bi-box' }}"></i> {{ m.name }}
+            <span class="nav-beta" style="background:var(--color-surface-2);color:var(--color-text-muted)">em breve</span>
+          </span>
+          {% endif %}
+        {% endfor %}
+        {% endif %}
+
+        {# ----- Menu do módulo Inventário de Máquinas ----- #}
+        {% if in_inventory %}
+        <div class="form-section-title" style="margin:1.1rem 0 0.4rem 0.85rem">Inventário de Máquinas</div>
+        <a class="nav-link-item {{ 'active' if nav == 'main.dashboard' }}"
+           href="{{ url_for('main.dashboard') }}"><i class="bi bi-grid-1x2"></i> Painel</a>
+        <a class="nav-link-item {{ 'active' if nav.startswith('assets.') }}"
+           href="{{ url_for('assets.list_assets') }}"><i class="bi bi-hdd-stack"></i> Ativos</a>
+        <a class="nav-link-item {{ 'active' if nav.startswith('maintenance.') }}"
+           href="{{ url_for('maintenance.list_maintenance') }}"><i class="bi bi-tools"></i> Manutenções</a>
+        {% if current_user.is_admin %}
+        <a class="nav-link-item {{ 'active' if nav.startswith('audit.') }}"
+           href="{{ url_for('audit.list_logs') }}"><i class="bi bi-shield-check"></i> Auditoria</a>
+        {% endif %}
+        <div class="form-section-title" style="margin:1rem 0 0.4rem 0.85rem">Cadastros</div>
         {% set cur_entity = request.view_args.get('entity') if request.view_args else None %}
         {% for item in REGISTRY_MENU %}
         <a class="nav-link-item {{ 'active' if nav.startswith('registry.') and cur_entity == item.slug }}"
@@ -51,6 +77,29 @@
           <i class="bi {{ item.icon }}"></i> {{ item.plural }}
         </a>
         {% endfor %}
+        {% endif %}
+
+        {# ----- Menu do módulo Infraestrutura de Rede ----- #}
+        {% if in_network %}
+        <div class="form-section-title" style="margin:1.1rem 0 0.4rem 0.85rem">Infraestrutura de Rede</div>
+        <a class="nav-link-item {{ 'active' if nav in ('network.overview','network.panel','network.rack_detail','network.new_rack','network.edit_rack') }}"
+           href="{{ url_for('network.overview') }}"><i class="bi bi-diagram-3"></i> Cabeamento</a>
+        <a class="nav-link-item {{ 'active' if nav in ('network.areas','network.area_detail','network.new_area','network.edit_area','network.desk_detail','network.new_desk','network.edit_desk','network.edit_seat') }}"
+           href="{{ url_for('network.areas') }}"><i class="bi bi-door-open"></i> Ambientes</a>
+        <a class="nav-link-item {{ 'active' if nav == 'network.sectors' }}"
+           href="{{ url_for('network.sectors') }}"><i class="bi bi-tags"></i> Setores</a>
+        <a class="nav-link-item {{ 'active' if nav == 'network.points' }}"
+           href="{{ url_for('network.points') }}"><i class="bi bi-ethernet"></i> Buscar ponto</a>
+        {% endif %}
+
+        {# ----- Menu do módulo Certificados ----- #}
+        {% if in_certificates %}
+        <div class="form-section-title" style="margin:1.1rem 0 0.4rem 0.85rem">Certificados</div>
+        <a class="nav-link-item {{ 'active' if nav in ('certificates.list_certificates','certificates.view_certificate','certificates.new_certificate','certificates.edit_certificate') }}"
+           href="{{ url_for('certificates.list_certificates') }}"><i class="bi bi-file-earmark-lock"></i> Certificados</a>
+        <a class="nav-link-item {{ 'active' if nav == 'certificates.import_certificates_view' }}"
+           href="{{ url_for('certificates.import_certificates_view') }}"><i class="bi bi-cloud-arrow-up"></i> Importar (crt.sh)</a>
+        {% endif %}
       </nav>
       <div class="sidebar-footer">
         <div class="d-flex align-center gap-1 mb-2">
@@ -60,6 +109,12 @@
             <div class="text-muted" style="font-size:0.75rem">{{ current_user.role.value }}</div>
           </div>
         </div>
+        {% if current_user.is_admin %}
+        <a class="nav-link-item {{ 'active' if nav.startswith('users.') }}"
+           href="{{ url_for('users.list_users') }}">
+          <i class="bi bi-people"></i> Usuários
+        </a>
+        {% endif %}
         <a class="nav-link-item {{ 'active' if nav.startswith('settings.') }}"
            href="{{ url_for('settings.index') }}">
           <i class="bi bi-gear"></i> Configurações

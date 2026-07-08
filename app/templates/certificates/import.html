@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Importar certificados — Certificados{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-cloud-arrow-up"></i> Importar certificados</h1>
+    <p class="text-muted mb-0">Cole o JSON do crt.sh ou envie um arquivo <code>.json</code>.</p>
+  </div>
+  <a href="{{ url_for('certificates.list_certificates') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <div class="form-section-title">Como funciona</div>
+  <p class="text-muted mb-0" style="font-size:0.9rem">
+    A importação é <strong>idempotente</strong>: cada certificado é identificado pelo
+    <code>serial_number</code>. Reenviar <strong>não duplica</strong> — apenas atualiza os
+    dados e os domínios. Duas origens são aceitas: o <strong>JSON do crt.sh</strong> e uma
+    <strong>planilha Excel</strong>. Na planilha, se você incluir a coluna de serial a
+    deduplicação cruza com o JSON; sem serial, geramos uma chave própria por linha
+    (nome + validade) para não duplicar.
+  </p>
+</div>
+
+<div class="form-grid" style="align-items:start">
+
+  <!-- Excel -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-file-earmark-excel"></i> Planilha Excel</div>
+    <p class="text-muted" style="font-size:0.86rem">
+      Ao enviar, você vê uma <strong>tela de revisão</strong> (novo × existente e
+      inconsistências) e confirma antes de gravar. Não sabe o formato? Baixe a
+      planilha-modelo.</p>
+    <a href="{{ url_for('certificates.import_template_xlsx') }}" class="btn btn-ghost btn-sm mb-2">
+      <i class="bi bi-download"></i> Baixar planilha-modelo</a>
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label" for="xlsx_file">Arquivo .xlsx</label>
+        <input id="xlsx_file" name="xlsx_file" type="file"
+               accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+               class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-cloud-arrow-up"></i> Importar Excel</button>
+    </form>
+    <p class="text-muted mb-0 mt-2" style="font-size:0.8rem">
+      Colunas: Serial (opcional), Nome comum, Domínios, Emissor, Emissão, <strong>Validade</strong> (obrigatória), Observações.
+      Também reconhece cabeçalhos do seu monitor, como <code>domain_name</code> e <code>ssl_expiration_date</code>.
+    </p>
+  </div>
+
+  <!-- JSON -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-filetype-json"></i> JSON (crt.sh)</div>
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label" for="json_file">Arquivo JSON</label>
+        <input id="json_file" name="json_file" type="file" accept=".json,application/json" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="json_text">…ou cole o conteúdo JSON</label>
+        <textarea id="json_text" name="json_text" class="form-control" rows="10"
+          placeholder='[ { "common_name": "warren.com.br", "name_value": "a.warren.com.br\nb.warren.com.br", "not_after": "2026-10-04T16:07:26", "serial_number": "05e0…" } ]'></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-cloud-arrow-up"></i> Importar JSON</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

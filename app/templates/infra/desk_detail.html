@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ desk.name }} — {{ SETTINGS.company_name }}{% endblock %}
+
+{% macro seat_chip(seat) %}
+  {% set emp = seat.employee %}
+  {% set machine = machines.get(seat.employee_id) %}
+  <div class="seat {{ 'empty' if not emp }}">
+    <div class="seat-ico">
+      {% if machine and machine.asset_type and machine.asset_type.slug == 'notebook' %}<i class="bi bi-laptop"></i>
+      {% elif machine and machine.asset_type and machine.asset_type.slug == 'desktop' %}<i class="bi bi-pc-display"></i>
+      {% elif emp %}<i class="bi bi-person"></i>
+      {% else %}<i class="bi bi-plus-circle"></i>{% endif %}
+    </div>
+    <div class="seat-name">{{ emp.name if emp else (seat.label or 'Vazio') }}</div>
+    <div class="seat-machine">
+      {% if machine %}<a href="{{ url_for('assets.view_asset', asset_id=machine.id) }}">{{ machine.asset_tag }}</a>
+      {% elif emp %}<span class="text-muted">sem máquina</span>{% endif %}
+    </div>
+    {% if can_edit %}
+    <div class="seat-actions">
+      <a href="{{ url_for('network.edit_seat', seat_id=seat.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+      <form method="post" action="{{ url_for('network.delete_seat', seat_id=seat.id) }}" style="display:inline"
+            onsubmit="return confirm('Remover esta posição?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" title="Remover"><i class="bi bi-x-lg"></i></button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-easel"></i> {{ desk.name }}</h1>
+    <p class="text-muted mb-0">
+      Sala: <a href="{{ url_for('network.area_detail', area_id=desk.area_id) }}">{{ desk.area.name }}</a>
+      · {{ seats|length }} posição(ões)
+      {% for s in desk.sectors %}<span class="badge badge-neutral">{{ s.name }}</span> {% endfor %}
+    </p>
+  </div>
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
+    <a href="{{ url_for('network.area_detail', area_id=desk.area_id) }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+    {% if can_edit %}
+    <a href="{{ url_for('network.edit_desk', desk_id=desk.id) }}" class="btn btn-ghost"><i class="bi bi-pencil"></i> Editar mesa</a>
+    <form method="post" action="{{ url_for('network.delete_desk', desk_id=desk.id) }}" onsubmit="return confirm('Remover a mesa?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Remover</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-2">
+  {% if seats %}
+  {% set n = seats|length %}
+  {% set half = (n + 1) // 2 %}
+  <div class="desk-plan">
+    <div class="desk-row">{% for seat in seats[:half] %}{{ seat_chip(seat) }}{% endfor %}</div>
+    <div class="desk-surface"><i class="bi bi-easel2"></i> {{ desk.name }}</div>
+    <div class="desk-row">{% for seat in seats[half:] %}{{ seat_chip(seat) }}{% endfor %}</div>
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:2rem"><i class="bi bi-easel"></i> Nenhuma posição ainda. Adicione a primeira abaixo.</div>
+  {% endif %}
+
+  {% if can_edit %}
+  <form method="post" action="{{ url_for('network.add_seat', desk_id=desk.id) }}" class="mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid" style="align-items:end;max-width:640px">
+      <div class="form-group mb-0">
+        <label class="form-label" for="employee_id">Pessoa (do inventário)</label>
+        <select id="employee_id" name="employee_id" class="form-select">
+          <option value="">— (posição vazia)</option>
+          {% for e in employees %}<option value="{{ e.id }}">{{ e.name }}{% if e.department %} · {{ e.department.name }}{% endif %}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group mb-0">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Adicionar posição</button>
+      </div>
+    </div>
+    <small class="text-muted">A máquina aparece sozinha, puxada do inventário (o equipamento que é responsabilidade da pessoa).</small>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

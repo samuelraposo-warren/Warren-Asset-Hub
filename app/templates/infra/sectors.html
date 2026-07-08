@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Setores — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-tags"></i> Setores</h1>
+    <p class="text-muted mb-0">Etiquetas aplicáveis a salas e mesas</p>
+  </div>
+  <a href="{{ url_for('network.areas') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card">
+  {% if sectors %}
+  <div class="d-flex gap-1 mb-2" style="flex-wrap:wrap">
+    {% for s in sectors %}
+    <span class="badge badge-neutral" style="display:inline-flex;align-items:center;gap:0.4rem;padding:5px 10px">
+      {{ s.name }}
+      {% if can_edit %}
+      <form method="post" action="{{ url_for('network.delete_sector', sector_id=s.id) }}" style="display:inline"
+            onsubmit="return confirm('Remover o setor {{ s.name }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" style="background:none;border:none;color:inherit;cursor:pointer;opacity:0.6" title="Remover">&times;</button>
+      </form>
+      {% endif %}
+    </span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted">Nenhum setor cadastrado.</p>
+  {% endif %}
+
+  {% if can_edit %}
+  <form method="post" action="{{ url_for('network.new_sector') }}" class="d-flex gap-1" style="max-width:420px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="name" class="form-control" placeholder="Novo setor (ex.: Comercial)" required>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i></button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

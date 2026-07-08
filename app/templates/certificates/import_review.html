@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Revisar importação — Certificados{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-clipboard-check"></i> Revisar importação</h1>
+    <p class="text-muted mb-0">Confira antes de gravar. Nada foi importado ainda.</p>
+  </div>
+  <a href="{{ url_for('certificates.import_certificates_view') }}" class="btn btn-ghost">
+    <i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="d-flex gap-1 mb-2" style="flex-wrap:wrap">
+  <span class="badge badge-neutral">Total: {{ counts.total }}</span>
+  <span class="badge badge-active">Novos: {{ counts.new }}</span>
+  <span class="badge badge-loaned">Atualizações: {{ counts.update }}</span>
+  <span class="badge badge-neutral">Sem data: {{ counts.nodate }}</span>
+  <span class="badge badge-defective">Bloqueadas: {{ counts.problem }}</span>
+</div>
+
+{% if counts.problem %}
+<div class="alert alert-warning" role="alert">
+  <span><i class="bi bi-exclamation-triangle"></i>
+    {{ counts.problem }} linha(s) têm inconsistências e não podem ser importadas
+    (aparecem desabilitadas). Corrija na planilha e reenvie, ou importe apenas as válidas.</span>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('certificates.import_confirm') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="payload" value='{{ payload_json | e }}'>
+
+  <div class="card">
+    <div class="d-flex gap-1 mb-2">
+      <button type="button" class="btn btn-ghost btn-sm"
+              onclick="document.querySelectorAll('.rowchk:not(:disabled)').forEach(c=>c.checked=true)">Marcar todos</button>
+      <button type="button" class="btn btn-ghost btn-sm"
+              onclick="document.querySelectorAll('.rowchk').forEach(c=>c.checked=false)">Desmarcar todos</button>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:34px"></th>
+            <th>Domínio / CN</th>
+            <th>Validade</th>
+            <th>Situação</th>
+            <th>Ação</th>
+            <th>Observações da conferência</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr {% if not row.importable %}style="opacity:0.65"{% endif %}>
+            <td>
+              <input class="rowchk" type="checkbox" name="rows" value="{{ row.index }}"
+                     {{ 'checked' if row.importable }} {{ 'disabled' if not row.importable }}>
+            </td>
+            <td>
+              {{ row.common_name or '—' }}
+              {% if row.domains|length > 1 %}
+              <div class="text-muted" style="font-size:0.78rem">+{{ row.domains|length - 1 }} domínio(s)</div>
+              {% endif %}
+              {% if row.synthetic %}<div class="text-muted" style="font-size:0.72rem">chave: {{ row.serial }}</div>{% endif %}
+            </td>
+            <td>
+              {% if row.not_after %}
+                {{ row.not_after | date_br }}
+                {% if row.days is not none %}
+                <div class="text-muted" style="font-size:0.78rem">
+                  {% if row.days < 0 %}há {{ -row.days }}d{% elif row.days == 0 %}hoje{% else %}em {{ row.days }}d{% endif %}</div>
+                {% endif %}
+              {% else %}
+                <span class="badge badge-neutral">sem data</span>
+                {% if row.not_after_raw %}<div class="text-muted" style="font-size:0.75rem">"{{ row.not_after_raw }}"</div>{% endif %}
+              {% endif %}
+            </td>
+            <td><span class="badge {{ row.status | cert_status_badge }}">{{ row.status | cert_status_label }}</span></td>
+            <td>
+              {% if row.action == 'update' %}
+                <span class="badge badge-loaned">Atualizar</span>
+              {% else %}
+                <span class="badge badge-active">Novo</span>
+              {% endif %}
+            </td>
+            <td style="font-size:0.82rem">
+              {% for p in row.problems %}
+              <div style="color:var(--color-danger,#e05a5a)"><i class="bi bi-x-octagon"></i> {{ p }}</div>
+              {% endfor %}
+              {% for w in row.warnings %}
+              <div class="text-muted"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>
+              {% endfor %}
+              {% if row.changed %}
+              <div style="color:var(--color-warning,#d4a017)">
+                <i class="bi bi-arrow-repeat"></i>
+                Muda validade: {{ row.old_after | date_br }} → {{ row.not_after | date_br }}
+              </div>
+              {% endif %}
+              {% if not row.problems and not row.warnings and not row.changed %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex gap-1 mt-2">
+      <button type="submit" class="btn btn-primary"
+              onclick="return confirm('Importar as linhas selecionadas?');">
+        <i class="bi bi-cloud-arrow-up"></i> Importar selecionados
+      </button>
+      <a href="{{ url_for('certificates.import_certificates_view') }}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

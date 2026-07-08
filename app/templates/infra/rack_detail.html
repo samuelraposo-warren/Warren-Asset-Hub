@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Rack {{ rack.code }} — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-hdd-rack"></i> {{ rack.code }}{% if rack.name %} — {{ rack.name }}{% endif %}</h1>
+    <p class="text-muted mb-0">
+      {% if rack.area %}Ambiente: <a href="{{ url_for('network.area_detail', area_id=rack.area_id) }}">{{ rack.area.name }}</a> · {% endif %}
+      {{ panels|length }} painel(is)
+    </p>
+  </div>
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
+    <a href="{{ url_for('network.overview') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+    {% if can_edit %}
+    <a href="{{ url_for('network.edit_rack', rack_id=rack.id) }}" class="btn btn-ghost"><i class="bi bi-pencil"></i> Editar</a>
+    <form method="post" action="{{ url_for('network.delete_rack', rack_id=rack.id) }}" onsubmit="return confirm('Remover este rack?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Remover</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-title"><i class="bi bi-grid-3x3-gap"></i> Patch panels</div>
+  {% if panels %}
+  <div class="panel-grid">
+    {% for p in panels %}
+    {% set c = counts.get(p.id, {}) %}
+    {% set total = (c.values() | sum) if c else 0 %}
+    {% set free = c.get('FREE', 0) %}
+    <div class="panel-card">
+      <a href="{{ url_for('network.panel', panel_id=p.id) }}" style="color:inherit">
+        <div class="panel-code">{{ p.code }}</div>
+        <div class="panel-occ-bar"><div class="panel-occ-fill" style="width: {{ ((total-free)/total*100) if total else 0 }}%"></div></div>
+        <div class="panel-nums"><span class="text-muted">{{ total }} pts</span><span><span class="dot dot-free"></span>{{ free }} livres</span></div>
+      </a>
+      {% if can_edit %}
+      <form method="post" action="{{ url_for('network.delete_panel', panel_id=p.id) }}" onsubmit="return confirm('Remover painel {{ p.code }}?');" style="margin-top:0.4rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger btn-sm w-100"><i class="bi bi-trash"></i></button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted">Nenhum patch panel neste rack ainda.</p>
+  {% endif %}
+
+  {% if can_edit %}
+  <form method="post" action="{{ url_for('network.new_panel', rack_id=rack.id) }}" class="mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid" style="align-items:end">
+      <div class="form-group mb-0">
+        <label class="form-label" for="code">Novo painel (código)</label>
+        <input type="text" id="code" name="code" class="form-control" required placeholder="Ex.: PPA">
+      </div>
+      <div class="form-group mb-0" style="max-width:160px">
+        <label class="form-label" for="num_ports">Nº de portas</label>
+        <input type="number" id="num_ports" name="num_ports" class="form-control" value="24" min="0">
+      </div>
+      <div class="form-group mb-0">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Adicionar painel</button>
+      </div>
+    </div>
+    <small class="text-muted">As portas são criadas automaticamente (1 até o nº informado), todas como "livre".</small>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

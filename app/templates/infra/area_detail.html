@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}{{ area.name }} — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-door-open"></i> {{ area.name }}</h1>
+    <p class="text-muted mb-0">
+      {% if area.kind %}<span class="badge badge-neutral">{{ area.kind }}</span> {% endif %}
+      {% for s in area.sectors %}<span class="badge badge-loaned">{{ s.name }}</span> {% endfor %}
+      {{ area.description or '' }}
+    </p>
+  </div>
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
+    <a href="{{ url_for('network.areas') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+    {% if can_edit %}
+    <a href="{{ url_for('network.edit_area', area_id=area.id) }}" class="btn btn-ghost"><i class="bi bi-pencil"></i> Editar</a>
+    <form method="post" action="{{ url_for('network.delete_area', area_id=area.id) }}"
+          onsubmit="return confirm('Remover este ambiente?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Remover</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if area.notes %}
+<div class="card mb-2"><div class="card-title">Observações</div><p class="mb-0">{{ area.notes }}</p></div>
+{% endif %}
+
+<div class="card mb-2">
+  <div class="d-flex align-center justify-between mb-2">
+    <div class="card-title mb-0"><i class="bi bi-easel"></i> Mesas ({{ desks|length }})</div>
+    {% if can_edit %}
+    <a href="{{ url_for('network.new_desk', area_id=area.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-plus-lg"></i> Nova mesa</a>
+    {% endif %}
+  </div>
+  {% if desks %}
+  <div class="panel-grid">
+    {% for d in desks %}
+    <a class="panel-card" href="{{ url_for('network.desk_detail', desk_id=d.id) }}">
+      <div class="panel-code">{{ d.name }}</div>
+      <div class="panel-nums">
+        <span class="text-muted"><i class="bi bi-people"></i> {{ d.seats|selectattr('is_active')|list|length }} posições</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Nenhuma mesa nesta sala.
+    {% if can_edit %}<a href="{{ url_for('network.new_desk', area_id=area.id) }}">Adicionar mesa</a>.{% endif %}
+  </p>
+  {% endif %}
+</div>
+
+<div class="card mb-2">
+  <div class="d-flex align-center justify-between mb-2">
+    <div class="card-title mb-0"><i class="bi bi-hdd-rack"></i> Racks neste ambiente ({{ racks|length }})</div>
+    {% if can_edit %}
+    <a href="{{ url_for('network.new_rack', area=area.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-plus-lg"></i> Novo rack</a>
+    {% endif %}
+  </div>
+  {% if racks %}
+  <div class="panel-grid">
+    {% for r in racks %}
+    <a class="panel-card" href="{{ url_for('network.rack_detail', rack_id=r.id) }}">
+      <div class="panel-code">{{ r.code }}</div>
+      {% if r.name %}<div class="text-muted" style="font-size:0.75rem">{{ r.name }}</div>{% endif %}
+      <div class="panel-nums"><span class="text-muted">{{ r.panels|selectattr('is_active')|list|length }} painel(is)</span></div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Nenhum rack neste ambiente.
+    {% if can_edit %}<a href="{{ url_for('network.new_rack', area=area.id) }}">Adicionar rack</a>.{% endif %}
+  </p>
+  {% endif %}
+</div>
+
+<div class="card mb-2">
+  <div class="card-title"><i class="bi bi-hdd-stack"></i> Equipamentos ({{ total_equip }} no total)</div>
+  {% if equipment %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Equipamento</th><th>Tipo</th><th>Qtd</th><th>Obs</th>{% if can_edit %}<th style="text-align:right">Ações</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for e in equipment %}
+        <tr>
+          <td>{{ e.name }}</td>
+          <td>{{ e.kind or '—' }}</td>
+          <td>{{ e.quantity }}</td>
+          <td class="text-muted">{{ e.notes or '—' }}</td>
+          {% if can_edit %}
+          <td><div class="row-actions">
+            <form method="post" action="{{ url_for('network.delete_equipment', equip_id=e.id) }}"
+                  onsubmit="return confirm('Remover {{ e.name }}?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
+            </form>
+          </div></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">Nenhum equipamento listado ainda.</p>
+  {% endif %}
+
+  {% if can_edit %}
+  <form method="post" action="{{ url_for('network.add_equipment', area_id=area.id) }}" class="mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid" style="align-items:end">
+      <div class="form-group mb-0">
+        <label class="form-label" for="name">Equipamento</label>
+        <input type="text" id="name" name="name" class="form-control" required placeholder="Ex.: Servidor Bloomberg">
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label" for="kind">Tipo</label>
+        <input list="ekinds" id="kind" name="kind" class="form-control" placeholder="Servidor, Switch…">
+        <datalist id="ekinds">{% for k in equip_kinds %}<option value="{{ k }}">{% endfor %}</datalist>
+      </div>
+      <div class="form-group mb-0" style="max-width:110px">
+        <label class="form-label" for="quantity">Qtd</label>
+        <input type="number" id="quantity" name="quantity" class="form-control" value="1" min="1">
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label" for="notes">Obs</label>
+        <input type="text" id="notes" name="notes" class="form-control">
+      </div>
+      <div class="form-group mb-0">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Adicionar</button>
+      </div>
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card mb-2">
+  <div class="card-title"><i class="bi bi-ethernet"></i> Pontos de rede neste ambiente ({{ points|length }})</div>
+  {% if points %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Rótulo</th><th>Painel</th><th>Nº</th><th>Status</th><th>Plugado</th></tr></thead>
+      <tbody>
+        {% for pt in points %}
+        <tr>
+          <td>{{ pt.label or '—' }}</td>
+          <td><a href="{{ url_for('network.panel', panel_id=pt.patch_panel_id) }}">{{ pt.panel.rack.code }} {{ pt.panel.code }}</a></td>
+          <td>{{ pt.number }}</td>
+          <td><span class="badge {{ pt.status.value | port_badge }}">{{ pt.status.value | port_label }}</span></td>
+          <td>{{ pt.endpoint or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">Nenhum ponto vinculado. Vincule um ponto a este ambiente pela tela do ponto (Cabeamento → painel → editar ponto → Área).</p>
+  {% endif %}
+</div>
+{% endblock %}

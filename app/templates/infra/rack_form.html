@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Novo rack' if is_new else 'Editar rack' }} — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><h1 class="mb-0">{{ 'Novo rack' if is_new else 'Editar rack' }}</h1></div>
+  <a href="{{ url_for('network.overview') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="code">Código *</label>
+        <input type="text" id="code" name="code" class="form-control" required
+               value="{{ rack.code or '' }}" placeholder="Ex.: R04">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="name">Nome</label>
+        <input type="text" id="name" name="name" class="form-control"
+               value="{{ rack.name or '' }}" placeholder="Ex.: Rack principal CPD">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="area_id">Ambiente / sala</label>
+        <select id="area_id" name="area_id" class="form-select">
+          <option value="">—</option>
+          {% for a in areas %}
+          <option value="{{ a.id }}" {{ 'selected' if rack.area_id == a.id }}>{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="notes">Observações</label>
+      <textarea class="form-control" id="notes" name="notes" rows="2">{{ rack.notes or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+  </form>
+</div>
+{% endblock %}

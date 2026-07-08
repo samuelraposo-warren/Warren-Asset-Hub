@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Usuários — Inventário de TI{% endblock %}
+{% block title %}Usuários — {{ SETTINGS.company_name }}{% endblock %}
 
 {% set role_badge = {'ADMIN': 'badge-defective', 'TI': 'badge-loaned', 'VIEWER': 'badge-neutral'} %}
 {% set role_label = {'ADMIN': 'Administrador', 'TI': 'TI', 'VIEWER': 'Consulta'} %}
@@ -15,7 +15,39 @@
   </a>
 </div>
 
+<div class="card mb-2">
+  <form method="get" class="form-grid" style="align-items:end" data-autosubmit>
+    <div class="form-group mb-0">
+      <label class="form-label" for="q">Buscar</label>
+      <input id="q" name="q" class="form-control" value="{{ filters.q }}"
+             placeholder="nome ou e-mail…" autocomplete="off">
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="role">Papel</label>
+      <select id="role" name="role" class="form-select">
+        <option value="">Todos</option>
+        {% for r in roles %}
+        <option value="{{ r.name }}" {{ 'selected' if filters.role == r.name }}>{{ role_label.get(r.name, r.value) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="status">Situação</label>
+      <select id="status" name="status" class="form-select">
+        <option value="">Todas</option>
+        <option value="active"   {{ 'selected' if filters.status == 'active' }}>Ativos</option>
+        <option value="inactive" {{ 'selected' if filters.status == 'inactive' }}>Inativos</option>
+      </select>
+    </div>
+    <div class="form-group mb-0 d-flex gap-1">
+      <noscript><button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button></noscript>
+      <a href="{{ url_for('users.list_users') }}" class="btn btn-ghost">Limpar</a>
+    </div>
+  </form>
+</div>
+
 <div class="card">
+  {% if users %}
   <div class="table-wrap">
     <table class="table">
       <thead>
@@ -54,5 +86,8 @@
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="empty-state"><i class="bi bi-people"></i> Nenhum usuário encontrado com esses filtros.</div>
+  {% endif %}
 </div>
 {% endblock %}

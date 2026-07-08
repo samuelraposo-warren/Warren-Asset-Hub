@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}E-mail (SMTP) — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-envelope-gear"></i> E-mail (SMTP)</h1>
+    <p class="text-muted mb-0">Configuração usada nos alertas de vencimento de certificados.</p>
+  </div>
+  <a href="{{ url_for('settings.index') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2" style="border-left:3px solid var(--color-accent, #d4a017)">
+  <p class="text-muted mb-0" style="font-size:0.88rem">
+    <i class="bi bi-info-circle"></i>
+    Para Gmail / Google Workspace, use uma <strong>Senha de app</strong> (16 dígitos, com a
+    verificação em 2 etapas ativada) — não a senha normal da conta. Servidor
+    <code>smtp.gmail.com</code>, porta <code>587</code>, TLS ligado.
+    Estes valores têm prioridade sobre o <code>.env</code>.
+  </p>
+</div>
+
+<form method="post" action="{{ url_for('settings.update_email') }}" autocomplete="off">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="form-grid" style="align-items:start">
+  <!-- Configuração -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-sliders"></i> Servidor e credenciais</div>
+
+      <div class="form-group">
+        <label class="form-label" for="mail_server">Servidor SMTP</label>
+        <input id="mail_server" name="mail_server" class="form-control"
+               value="{{ mail.server or '' }}" placeholder="smtp.gmail.com">
+      </div>
+
+      <div class="form-grid" style="gap:0.75rem">
+        <div class="form-group">
+          <label class="form-label" for="mail_port">Porta</label>
+          <input id="mail_port" name="mail_port" type="number" class="form-control"
+                 value="{{ mail.port }}" style="max-width:140px">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Segurança</label>
+          <div class="d-flex gap-1" style="align-items:center;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:0.35rem">
+              <input type="checkbox" name="mail_use_tls" {{ 'checked' if mail.use_tls }}> STARTTLS
+            </label>
+            <label style="display:flex;align-items:center;gap:0.35rem">
+              <input type="checkbox" name="mail_use_ssl" {{ 'checked' if mail.use_ssl }}> SSL
+            </label>
+          </div>
+          <small class="text-muted">Gmail: apenas STARTTLS (porta 587).</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mail_username">Usuário (e-mail de login)</label>
+        <input id="mail_username" name="mail_username" class="form-control"
+               value="{{ mail.username or '' }}" placeholder="ti@suaempresa.com.br">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mail_password">Senha de app</label>
+        <input id="mail_password" name="mail_password" type="password" class="form-control"
+               autocomplete="new-password"
+               placeholder="{{ '•••••••••••••• (salva — deixe em branco para manter)' if has_password else 'não definida' }}">
+        {% if has_password %}
+        <label class="text-muted" style="display:flex;align-items:center;gap:0.35rem;margin-top:0.4rem;font-size:0.85rem">
+          <input type="checkbox" name="clear_password" value="1"> Remover a senha salva
+        </label>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mail_from">Remetente exibido (From)</label>
+        <input id="mail_from" name="mail_from" class="form-control"
+               value="{{ mail.from or '' }}" placeholder="deixe em branco para usar o usuário">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="mail_from_name">Nome do remetente</label>
+        <input id="mail_from_name" name="mail_from_name" class="form-control"
+               value="{{ mail.from_name or '' }}" placeholder="Warren IT Hub">
+      </div>
+
+      <div class="form-group mb-0">
+        <label class="form-label" for="mail_alert_extra">Cópia fixa nos alertas (opcional)</label>
+        <input id="mail_alert_extra" name="mail_alert_extra" class="form-control"
+               value="{{ mail.alert_extra or '' }}"
+               placeholder="lista@empresa.com, outro@empresa.com">
+        <small class="text-muted">Sempre recebe cópia, além de quem tem acesso ao módulo. Separe por vírgula.</small>
+      </div>
+
+      <button type="submit" name="action" value="save" class="btn btn-primary mt-2">
+        <i class="bi bi-check-lg"></i> Salvar configuração</button>
+  </div>
+
+  <!-- Teste -->
+  <div class="card mb-2">
+    <div class="card-title"><i class="bi bi-send"></i> Enviar e-mail de teste</div>
+    <p class="text-muted" style="font-size:0.85rem">
+      Ao testar, a configuração é <strong>salva automaticamente</strong> antes do envio.</p>
+    <div class="form-group mb-0">
+      <label class="form-label" for="test_to">Enviar para</label>
+      <input id="test_to" name="test_to" class="form-control" type="email"
+             value="{{ current_user.email }}">
+    </div>
+    <button type="submit" name="action" value="test" class="btn btn-ghost mt-2">
+      <i class="bi bi-envelope-check"></i> Salvar e enviar teste</button>
+    <hr style="border:none;border-top:1px solid var(--color-border,#333);margin:1rem 0">
+    <p class="text-muted mb-0" style="font-size:0.82rem">
+      Status atual:
+      {% if mail.server and mail.username and has_password %}
+        <span class="badge badge-active">Configurado</span>
+      {% else %}
+        <span class="badge badge-maintenance">Incompleto</span>
+      {% endif %}
+    </p>
+  </div>
+</div>
+</form>
+{% endblock %}

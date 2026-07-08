@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Novo certificado' if is_new else 'Editar certificado' }} — Certificados{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-file-earmark-lock"></i>
+      {{ 'Novo certificado' if is_new else 'Editar certificado' }}</h1>
+    <p class="text-muted mb-0">Cadastro manual. Para muitos certificados, prefira a
+      <a href="{{ url_for('certificates.import_certificates_view') }}">importação do crt.sh</a>.</p>
+  </div>
+</div>
+
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="form-grid">
+    <div class="form-group">
+      <label class="form-label" for="common_name">Nome comum (CN)</label>
+      <input id="common_name" name="common_name" class="form-control"
+             value="{{ cert.common_name or '' }}" placeholder="ex.: warren.com.br">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="serial_number">Serial *</label>
+      <input id="serial_number" name="serial_number" class="form-control" required
+             value="{{ cert.serial_number or '' }}" placeholder="número de série do certificado">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="issuer_name">Emissor</label>
+      <input id="issuer_name" name="issuer_name" class="form-control"
+             value="{{ cert.issuer_name or '' }}" placeholder="ex.: C=US, O=Let's Encrypt, CN=R11">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="not_before">Válido de</label>
+      <input id="not_before" name="not_before" type="date" class="form-control"
+             value="{{ cert.not_before.strftime('%Y-%m-%d') if cert.not_before else '' }}">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="not_after">Vence em *</label>
+      <input id="not_after" name="not_after" type="date" class="form-control"
+             value="{{ cert.not_after.strftime('%Y-%m-%d') if cert.not_after else '' }}">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label" for="domains">Domínios (um por linha)</label>
+    <textarea id="domains" name="domains" class="form-control" rows="6"
+      placeholder="api.prd.warren.com.br&#10;*.stg.warren.com.br">{{ cert.domain_list | join('\n') }}</textarea>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label" for="notes">Observações</label>
+    <textarea id="notes" name="notes" class="form-control" rows="2">{{ cert.notes or '' }}</textarea>
+  </div>
+
+  <div class="d-flex gap-1">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+    <a href="{{ url_for('certificates.list_certificates') }}" class="btn btn-ghost">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

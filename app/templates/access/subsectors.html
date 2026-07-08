@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Sub-setores — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-diagram-2"></i> Sub-setores de TI</h1>
+    <p class="text-muted mb-0">{{ subsectors|length }} sub-setor(es)</p>
+  </div>
+  <div class="d-flex gap-1">
+    <a href="{{ url_for('main.hub') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Início</a>
+    <a href="{{ url_for('access.edit_subsector') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Nome</th><th>Slug</th><th>Descrição</th><th>Módulos</th><th>Situação</th><th style="text-align:right">Ações</th></tr></thead>
+      <tbody>
+        {% for s in subsectors %}
+        <tr>
+          <td><i class="bi {{ s.icon or 'bi-folder' }}"></i> {{ s.name }}</td>
+          <td class="text-muted">{{ s.slug }}</td>
+          <td>{{ s.description or '—' }}</td>
+          <td>{{ s.modules|selectattr('is_active')|list|length }}</td>
+          <td>{% if s.is_active %}<span class="badge badge-active">Ativo</span>{% else %}<span class="badge badge-inactive">Inativo</span>{% endif %}</td>
+          <td><div class="row-actions">
+            <a href="{{ url_for('access.edit_subsector', sub_id=s.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{{ url_for('access.delete_subsector', sub_id=s.id) }}" onsubmit="return confirm('Remover {{ s.name }}?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i></button>
+            </form>
+          </div></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

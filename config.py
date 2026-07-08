@@ -27,6 +27,21 @@ class Config:
         "pool_recycle": 280,
     }
 
+    # --- E-mail (SMTP) ----------------------------------------------
+    # Usado pelos alertas de vencimento de certificados. Padrão: Google
+    # Workspace/Gmail (smtp.gmail.com:587 STARTTLS, senha de app).
+    MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").lower() in ("1", "true", "yes")
+    MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "false").lower() in ("1", "true", "yes")
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    # Remetente exibido. Se vazio, cai no MAIL_USERNAME.
+    MAIL_FROM = os.environ.get("MAIL_FROM") or os.environ.get("MAIL_USERNAME")
+    MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "Centralizador de TI")
+    # Destinatário extra fixo (opcional): sempre recebe cópia dos alertas.
+    MAIL_ALERT_EXTRA = os.environ.get("MAIL_ALERT_EXTRA")
+
 
 class DevelopmentConfig(Config):
     """Ambiente de desenvolvimento."""

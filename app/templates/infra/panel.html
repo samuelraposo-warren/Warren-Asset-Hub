@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ panel.rack.code }} {{ panel.code }} — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-grid-3x3-gap"></i> {{ panel.rack.code }} · {{ panel.code }}</h1>
+    <p class="text-muted mb-0">{{ points|length }} pontos ·
+      {{ counts.get('FREE', 0) }} livres · {{ counts.get('OCCUPIED', 0) }} ocupadas ·
+      {{ counts.get('DEFECT', 0) }} defeito · {{ counts.get('RESERVED', 0) }} reservadas
+    </p>
+  </div>
+  <a href="{{ url_for('network.overview') }}" class="btn btn-ghost"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card mb-2">
+  <div class="d-flex gap-2 mb-2" style="flex-wrap:wrap;font-size:0.8rem">
+    <span class="text-muted">Legenda:</span>
+    <span><span class="dot dot-free"></span> Livre</span>
+    <span><span class="dot dot-occ"></span> Ocupada</span>
+    <span><span class="dot dot-def"></span> Defeito</span>
+    <span><span class="dot dot-res"></span> Reservada</span>
+  </div>
+  <div class="port-grid">
+    {% for pt in points %}
+    {% set cls = {'FREE':'port-free','OCCUPIED':'port-occ','DEFECT':'port-def','RESERVED':'port-res'}.get(pt.status.value, '') %}
+    <a class="port {{ cls }}"
+       href="{{ url_for('network.edit_point', point_id=pt.id) if can_edit else '#' }}"
+       title="{{ pt.status.value | port_label }}{% if pt.endpoint %} · {{ pt.endpoint }}{% endif %}">
+      <span class="port-num">{{ pt.number }}</span>
+      {% if pt.endpoint %}<span class="port-ep">{{ pt.endpoint }}</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

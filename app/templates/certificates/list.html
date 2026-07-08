@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Certificados — {{ SETTINGS.company_name }}{% endblock %}
+
+{% block content %}
+{% macro sortth(key, label, extra='') %}
+  {% set cur = filters.sort == key %}
+  {% set nd = 'desc' if (cur and filters.dir != 'desc') else 'asc' %}
+  <th {{ extra }}>
+    <a href="{{ url_for('certificates.list_certificates', status=filters.status, q=filters.q, env=filters.env, sort=key, dir=nd) }}"
+       style="color:inherit;display:inline-flex;align-items:center;gap:.25rem">
+      {{ label }}
+      {% if cur %}<i class="bi bi-caret-{{ 'down' if filters.dir == 'desc' else 'up' }}-fill" style="font-size:.7rem"></i>
+      {% else %}<i class="bi bi-arrow-down-up" style="font-size:.62rem;opacity:.35"></i>{% endif %}
+    </a>
+  </th>
+{% endmacro %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0"><i class="bi bi-file-earmark-lock"></i> Certificados</h1>
+    <p class="text-muted mb-0">{{ pagination.total }} certificado(s) encontrado(s)</p>
+  </div>
+  <div class="d-flex gap-1" style="flex-wrap:wrap">
+    {% if can_manage %}
+    <a href="{{ url_for('certificates.alerts_review') }}" class="btn btn-ghost">
+      <i class="bi bi-envelope"></i> Enviar alertas</a>
+    <a href="{{ url_for('certificates.import_certificates_view') }}" class="btn btn-ghost">
+      <i class="bi bi-cloud-arrow-up"></i> Importar
+    </a>
+    <a href="{{ url_for('certificates.new_certificate') }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Novo
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{# ----- Chips de resumo (clicáveis) ----- #}
+<div class="d-flex gap-1 mb-2" style="flex-wrap:wrap">
+  <a class="badge badge-neutral" href="{{ url_for('certificates.list_certificates') }}">
+    Total: {{ counts.total }}</a>
+  <a class="badge badge-defective" href="{{ url_for('certificates.list_certificates', status='expired') }}">
+    Vencidos: {{ counts.expired }}</a>
+  <a class="badge badge-stolen" href="{{ url_for('certificates.list_certificates', status='critical') }}">
+    Críticos (≤7d): {{ counts.critical }}</a>
+  <a class="badge badge-maintenance" href="{{ url_for('certificates.list_certificates', status='expiring') }}">
+    Vencendo (≤30d): {{ counts.expiring }}</a>
+  <a class="badge badge-neutral" href="{{ url_for('certificates.list_certificates', status='novalidity') }}">
+    Sem validade: {{ counts.novalidity }}</a>
+</div>
+
+<div class="card mb-2">
+  <form method="get" class="form-grid" style="align-items:end" data-autosubmit>
+    <div class="form-group mb-0">
+      <label class="form-label" for="q">Buscar</label>
+      <input id="q" name="q" class="form-control" value="{{ filters.q }}"
+             placeholder="domínio, CN, emissor ou serial…" autocomplete="off">
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="status">Situação</label>
+      <select id="status" name="status" class="form-select">
+        <option value="">Todas</option>
+        <option value="expired"  {{ 'selected' if filters.status == 'expired' }}>Vencidos</option>
+        <option value="critical" {{ 'selected' if filters.status == 'critical' }}>Críticos (≤7 dias)</option>
+        <option value="expiring" {{ 'selected' if filters.status == 'expiring' }}>Vencendo (≤30 dias)</option>
+        <option value="valid"    {{ 'selected' if filters.status == 'valid' }}>Válidos (&gt;30 dias)</option>
+        <option value="novalidity" {{ 'selected' if filters.status == 'novalidity' }}>Sem validade</option>
+      </select>
+    </div>
+    <div class="form-group mb-0">
+      <label class="form-label" for="env">Ambiente</label>
+      <select id="env" name="env" class="form-select">
+        <option value="">Todos</option>
+        <option value="prd" {{ 'selected' if filters.env == 'prd' }}>Produção</option>
+        <option value="stg" {{ 'selected' if filters.env == 'stg' }}>Staging</option>
+        <option value="hml" {{ 'selected' if filters.env == 'hml' }}>Homologação</option>
+        <option value="dev" {{ 'selected' if filters.env == 'dev' }}>Desenvolvimento</option>
+      </select>
+    </div>
+    <div class="form-group mb-0 d-flex gap-1">
+      <noscript><button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button></noscript>
+      <a href="{{ url_for('certificates.list_certificates') }}" class="btn btn-ghost">Limpar</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  {% if certificates %}
+  {% if can_manage %}
+  <form method="post" action="{{ url_for('certificates.bulk_delete') }}" onsubmit="return certConfirm()">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="status" value="{{ filters.status }}">
+  <input type="hidden" name="q" value="{{ filters.q }}">
+  <input type="hidden" name="env" value="{{ filters.env }}">
+  <div class="d-flex gap-1 align-center mb-2" style="flex-wrap:wrap">
+    <button type="submit" class="btn btn-danger btn-sm">
+      <i class="bi bi-trash"></i> Excluir selecionados (<span id="cbulkn">0</span>)</button>
+    <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:var(--color-text-muted)">
+      <input type="checkbox" id="cselall" name="select_all_filtered" value="1">
+      Selecionar todos os {{ pagination.total }} do filtro
+    </label>
+  </div>
+  {% endif %}
+  <div class="table-wrap">
+    <table class="table" id="certTable">
+      <thead>
+        <tr>
+          {% if can_manage %}<th style="width:34px"><input type="checkbox" id="ccheadall" title="Selecionar carregados"></th>{% endif %}
+          {{ sortth('cn', 'Nome comum (CN)') }}
+          {{ sortth('domains', 'Domínios') }}
+          {{ sortth('issuer', 'Emissor') }}
+          {{ sortth('expiry', 'Vence em') }}
+          {{ sortth('status', 'Situação') }}
+          <th style="text-align:right">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in certificates %}
+        <tr>
+          {% if can_manage %}<td><input class="cchk" type="checkbox" name="ids" value="{{ c.id }}"></td>{% endif %}
+          <td>
+            <a href="{{ url_for('certificates.view_certificate', cert_id=c.id) }}">
+              {{ c.common_name or '—' }}</a>
+          </td>
+          <td>
+            <span class="text-muted">{{ c.domains|length }}</span>
+            {% if c.domains %}
+            <div class="text-muted" style="font-size:0.78rem">
+              {{ c.domains[0].domain }}{% if c.domains|length > 1 %} +{{ c.domains|length - 1 }}{% endif %}
+            </div>
+            {% endif %}
+          </td>
+          <td style="font-size:0.85rem">{{ c.issuer_name or '—' }}</td>
+          <td>
+            {{ c.not_after | date_br }}
+            {% if c.days_to_expiry is not none %}
+            <div class="text-muted" style="font-size:0.78rem">
+              {% if c.days_to_expiry < 0 %}há {{ -c.days_to_expiry }} dia(s)
+              {% elif c.days_to_expiry == 0 %}hoje
+              {% else %}em {{ c.days_to_expiry }} dia(s){% endif %}
+            </div>
+            {% endif %}
+          </td>
+          <td><span class="badge {{ c.status_key | cert_status_badge }}">{{ c.status_key | cert_status_label }}</span></td>
+          <td>
+            <div class="row-actions">
+              <a href="{{ url_for('certificates.view_certificate', cert_id=c.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i></a>
+              {% if can_manage %}
+              <a href="{{ url_for('certificates.edit_certificate', cert_id=c.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-pencil"></i></a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if can_manage %}</form>{% endif %}
+  {% else %}
+  <div class="empty-state"><i class="bi bi-file-earmark-lock"></i> Nenhum certificado encontrado.</div>
+  {% endif %}
+
+  {% if certificates and pagination.pages > 1 %}
+  <div class="d-flex gap-1 mt-2 align-center justify-between" id="cmorebar">
+    <span class="text-muted" style="font-size:0.85rem">
+      Carregados <span id="cloaded">{{ certificates|length }}</span> de {{ pagination.total }}</span>
+    <div class="d-flex gap-1">
+      {% if pagination.has_next %}
+      <button type="button" id="cmore" class="btn btn-ghost btn-sm"
+              data-next="{{ url_for('certificates.list_certificates', page=pagination.next_num, **filters) }}">
+        <i class="bi bi-arrow-down-circle"></i> Ver mais</button>
+      {% endif %}
+      <noscript>
+        {% if pagination.has_prev %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('certificates.list_certificates', page=pagination.prev_num, **filters) }}">Anterior</a>
+        {% endif %}
+        {% if pagination.has_next %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('certificates.list_certificates', page=pagination.next_num, **filters) }}">Próxima</a>
+        {% endif %}
+      </noscript>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var table = document.getElementById('certTable');
+  if (!table) return;
+  var tbody = table.querySelector('tbody');
+  var head = document.getElementById('ccheadall');
+  var all = document.getElementById('cselall');
+  var cnt = document.getElementById('cbulkn');
+  var loaded = document.getElementById('cloaded');
+  var total = {{ pagination.total }};
+
+  function boxes() { return [].slice.call(tbody.querySelectorAll('.cchk')); }
+  function sel() { return boxes().filter(function (b) { return b.checked; }).length; }
+  function upd() { if (cnt) cnt.textContent = (all && all.checked) ? total : sel(); }
+
+  if (head) head.addEventListener('change', function () {
+    boxes().forEach(function (b) { b.checked = head.checked; });
+    if (all) all.checked = false; upd();
+  });
+  // Delegação: cobre os checkboxes atuais e os adicionados pelo "Ver mais".
+  tbody.addEventListener('change', function (e) {
+    if (e.target && e.target.classList && e.target.classList.contains('cchk')) {
+      if (all) all.checked = false; upd();
+    }
+  });
+  if (all) all.addEventListener('change', upd);
+  upd();
+
+  window.certConfirm = function () {
+    if (all && all.checked)
+      return confirm('Excluir TODOS os ' + total + ' certificado(s) do filtro atual?');
+    if (sel() === 0) { alert('Selecione ao menos um certificado.'); return false; }
+    return confirm('Excluir ' + sel() + ' certificado(s) selecionado(s)?');
+  };
+
+  // "Ver mais": busca a próxima página e anexa as linhas nesta tabela.
+  var more = document.getElementById('cmore');
+  if (more) {
+    more.addEventListener('click', function () {
+      var url = more.getAttribute('data-next');
+      if (!url) return;
+      var label = more.innerHTML;
+      more.disabled = true;
+      more.textContent = 'Carregando…';
+      fetch(url).then(function (r) { return r.text(); }).then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        doc.querySelectorAll('#certTable tbody tr').forEach(function (tr) {
+          tbody.appendChild(document.importNode(tr, true));
+        });
+        if (loaded) loaded.textContent = tbody.querySelectorAll('tr').length;
+        if (head) head.checked = false;
+        var nextMore = doc.getElementById('cmore');
+        if (nextMore) {
+          more.setAttribute('data-next', nextMore.getAttribute('data-next'));
+          more.disabled = false;
+          more.innerHTML = label;
+        } else if (more.parentNode) {
+          more.parentNode.removeChild(more);
+        }
+        upd();
+      }).catch(function () {
+        more.disabled = false;
+        more.innerHTML = label;
+        alert('Não consegui carregar mais itens. Tente novamente.');
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}
